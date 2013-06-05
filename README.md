@@ -9,4 +9,4 @@
 
 My own bash lib online, for everybody.
 
-Clone this repo and what you want with.
+Clone this repo and do what you want with it.
