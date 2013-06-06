@@ -7,6 +7,7 @@
 [ -z "$DB_USER" ] && DB_USER=""
 [ -z "$DB_PASS" ] && DB_PASS=""
 [ -z "$DB_NAME" ] && DB_NAME=""
+[ -z "$DB_HOST" ] && DB_HOST="localhost"
 [ -z "$DB_CMD" ] && DB_CMD="/usr/bin/mysql"
 
 [ ! -x "$DB_CMD" ] && echo "'$DB_CMD' is not executable !!" && exit 2
