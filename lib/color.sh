@@ -11,6 +11,7 @@
 # * implement backgrounds
 # * implement multiple style
 
+[ -z "$COLORIZE" ] && COLORIZE=1
 
 CHAR_ESC="\033"
 
@@ -58,8 +59,25 @@ function printColor() {
 	echo -en "$1"
 }
 
+function evalColorFunction() {
+	local func="$1"
+	if [ $COLORIZE -ge 1 ] ; then
+		local style="$2"
+		eval "function ${func}() { printColor \"$CHAR_ESC[${style}m\" ; printAndClear \"\$@\" ; }"
+		eval "function ${func}n() { ${func} \"\$@\" ; echo ; }"
+	else
+		eval "function ${func}() { echo -n \"\$@\" ; }"
+		eval "function ${func}n() { echo \"\$@\" ; }"
+	fi
+	export -f $func
+	export -f ${func}n
+}
+
 export -f printAndClear
 export -f printColor
+export -f evalColorFunction
+
+
 
 #--------------------------------------------------------------------------------
 #  S T Y L E S
@@ -68,10 +86,7 @@ export -f printColor
 for style_var in ${!STYLE_*} ; do
 	func=${style_var##*_}
 	eval "style=\$$style_var"
-	eval "function ${func}() { printColor \"$CHAR_ESC[${style}m\" ; printAndClear \"\$@\" ; }"
-	eval "function ${func}n() { ${func} \"\$@\" ; echo ; }"
-	export -f $func
-	export -f ${func}n
+	evalColorFunction "${func}" "${style}"
 done
 
 #--------------------------------------------------------------------------------
@@ -87,15 +102,10 @@ for color_var in ${!COLOR_*} ; do
 		if [ ! -z "$pref" ] ; then
 			eval "style_var=\$$prefix"
 			eval "style=\$STYLE_$style_var"
-			eval "function ${pref}${func}() { printColor \"$CHAR_ESC[${style};${color}m\" ; printAndClear \"\$@\" ; }"
+			evalColorFunction "${pref}${func}" "${style};${color}"
 		else
-			eval "function ${pref}${func}() { printColor \"$CHAR_ESC[${color}m\" ; printAndClear \"\$@\" ; }"
+			evalColorFunction "${pref}${func}" "${color}"
 		fi
-
-		eval "function ${pref}${func}n() { ${pref}${func} \"\$@\" ; echo ; }"
-
-		export -f ${pref}${func}
-		export -f ${pref}${func}n
 
 	done
 
