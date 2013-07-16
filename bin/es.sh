@@ -14,6 +14,7 @@ type=""
 query=""
 url=""
 data=""
+first_cmd=""
 
 # ------------------------------------------------------------------------------
 # READ CONF
@@ -84,6 +85,7 @@ where options are :
   -I|--index	INDEX
   -T|--type		TYPE
   -u|--url		URL
+  -a|--all
   
   # Commands & Query switches
   # -------------------------
@@ -107,7 +109,8 @@ function quit() {
 }
 
 function run() {
-	complete_url=$url
+	local complete_url=$url
+	[ ! -z "$first_cmd" ] && complete_url="$complete_url/$first_cmd"
 	if [ ! -z "$index" ] ; then
 		complete_url="$complete_url/$index"
 		[ ! -z "$type" ] && complete_url="$complete_url/$type"
@@ -141,7 +144,8 @@ while [ ${#@} -ne 0 ] ; do
 		# URL switches
 		-I|--index) _set "index" "$2" ; shift 2 ;;
 		-T|--type) _set "type" "$2" ; shift 2 ;;
-		-u|--url) _write url="$2" ; shift 2 ;;
+		-u|--url) _write "url" "$2" ; shift 2 ;;
+		-a|--all) _set "first_cmd" "_all" ; shift ;;
 		# Commands & Query switches
 		-c|--command) _set "command" "$2" ; shift 2 ;;
 		-q|--query) _add "query" "&" "$2" ; shift 2 ;;
