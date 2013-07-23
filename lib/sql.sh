@@ -11,7 +11,7 @@
 
 # needed DB Definitions
 [ -z "$DB_USER" ] && DB_USER=""
-[ -z "$DB_PASS" ] && DB_PASS=""
+#[ -z "$DB_PASS" ] && DB_PASS=""
 [ -z "$DB_NAME" ] && DB_NAME=""
 
 # optional DB Definitions
@@ -33,7 +33,9 @@ function sql() {
 	if [ $DB_DEBUG -eq 1 ] ; then
 		echo "$DB_CMD $DB_OPTIONS -e \"${@//#__/$DB_NAME.$DB_PREFIX}\"" >&2
 	fi
-	$DB_CMD $DB_OPTIONS -h $DB_HOST -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "${@//#__/$DB_NAME.$DB_PREFIX}"
+	[ -z "$DB_PASS" ] \
+		&& $DB_CMD $DB_OPTIONS -h $DB_HOST -u "$DB_USER" "$DB_NAME" -e "${@//#__/$DB_NAME.$DB_PREFIX}" \
+		|| $DB_CMD $DB_OPTIONS -h $DB_HOST -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "${@//#__/$DB_NAME.$DB_PREFIX}"
 }
 
 export -f sql
