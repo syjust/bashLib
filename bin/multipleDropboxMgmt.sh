@@ -1,6 +1,7 @@
 #!/bin/bash
 
-line="--------------------------------------------------------------------------------"
+line_dash="--------------------------------------------------------------------------------"
+line_asterisk="********************************************************************************"
 
 # ================================================================================
 # PATH, USAGE & STATIC VARIABLES
@@ -14,16 +15,15 @@ DBOXES="`ls $DBOX_DIR`"
 DIST_DIR=".dropbox-dist"
 DBOX_BIN="dropbox"
 COLOR_LIB="bashLib/lib/color.sh"
+RUN_COLOR="bwhiten"
 
 # ************************************************************
 # USAGE_DETAILS
 # ************************************************************
 USAGE_DETAILS="
-$line
-$THIS : a Multiple dropbox instances interact Managment
-$line
-
+$line_dash
 USAGE :
+$line_dash
 	$THIS action [dboxPath]
 
 	action can be :
@@ -38,7 +38,8 @@ USAGE :
 	default dboxPath is any (action is reported on a choosen dropboxe)
 	if choose is all (or dboxPath is all) action is recursively reported on a each one by one dropboxe
 	dboxPath are in $DBOX_DIR :
-	(`echo $DBOXES`)"
+	(`echo $DBOXES`)
+$line_dash"
 #
 # ************************************************************
 
@@ -82,15 +83,24 @@ function yesOrNo() {
 	done
 }
 function quit() {
-	bredn "$line\nERROR : $@\n$line"
-	exit 2
+	local ret=2
+	local write="bredn"
+	local mess="ERROR"
+	if [ ! -z "$2" ] ; then
+		ret=$2
+		[ $ret -eq 0 ] \
+			&& write="bcyann" \
+			&& mess="INFO"
+	fi
+	$write "$line_dash\n$mess : $1\n$line_dash\n"
+	exit $ret
 }
 function usage() {
-cat << EOF 
-$USAGE_DETAILS
-EOF
+byellown "$USAGE_DETAILS"
 	if [ ! -z "$1" ] ; then
-		quit "$1"
+		[ -z "$2" ] \
+		&& quit "$1" 0 \
+		|| quit "$1" $2
 	fi
 }
 
@@ -104,12 +114,18 @@ function choose() {
 	local ret=0
 
 	select dboxPath in $DBOXES all ; do
-		if [ "$dboxPath" == all ] ; then
-			ret=1
+		RUN_COLOR="bcyann"
+		if [ -z "$dboxPath" ] ; then
+			bredn "Unvalid choose ! ... another one ?"
 		else
-			run $action $dboxPath
+			if [ "$dboxPath" == all ] ; then
+				ret=1
+			else
+				run $action $dboxPath
+				RUN_COLOR="bwhiten"
+			fi
+			break
 		fi
-		break
 	done
 	return $ret
 }
@@ -249,7 +265,10 @@ function run() {
 	local dboxPath="$2"
 	local HOME="$DBOX_DIR/$dboxPath"
 	local HOSTNAME="slyWorkServ"
-	if [ "$dboxPath" == "any" ] ; then
+	$RUN_COLOR "\n$line_dash\nStart of run $action $dboxPath\n$line_dash"
+	if [ -z "$dboxPath" ] ; then
+		usage "empty deboxPath !!!"
+	elif [ "$dboxPath" == "any" ] ; then
 		choose $action \
 			|| loop $action
 	else
@@ -278,13 +297,15 @@ function run() {
 
 			# Usage & error
 			help|usage) usage "USAGE CALLED" ;;
-			*) usage "unrocognized action '$action')" ;;
+			*) usage "unrocognized action '$action'" 2;;
 		esac
 	fi
+	$RUN_COLOR "$line_dash\nEnd of run $action $dboxPath\n$line_dash\n"
 }
 
 if [ -z "$action" ] ; then
-	usage "action must be given"
+	usage "action must be given" 3
 else
+	byellown "\n$line_asterisk\n$THIS : a Multiple dropbox instances interact Managment\n$line_asterisk"
 	run $action $dboxPath
 fi
