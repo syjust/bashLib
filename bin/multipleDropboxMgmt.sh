@@ -16,6 +16,7 @@ DIST_DIR=".dropbox-dist"
 DBOX_BIN="dropbox"
 COLOR_LIB="bashLib/lib/color.sh"
 RUN_COLOR="bwhiten"
+NICE="19"
 
 # ************************************************************
 # USAGE_DETAILS
@@ -32,6 +33,7 @@ $line_dash
 		* retstart
 		* status
 		* login (exec bash in path)
+		* update (update $DBOX_BIN versions)
 		* install
 		* exists
 
@@ -53,9 +55,9 @@ action="$1"
 
 # dboxPath
 # ----------------------------------------
-# dboxPath is Dropbox directory path where specific dropbox running (in DBOX_DIR)
+# dboxPath is Dropbox directory path where specific $DBOX_BIN running (in DBOX_DIR)
 # if dboxPath not exists => create it and install it
-# if no dboxPath or dboxPath == all : run action on each dropbox in DBOX_DIR
+# if no dboxPath or dboxPath == all : run action on each $DBOX_BIN in DBOX_DIR
 
 [ -z "$2" ] && dboxPath="any" || dboxPath="$2"
 
@@ -107,7 +109,7 @@ byellown "$USAGE_DETAILS"
 # other functions
 # ----------------------------------------
 
-# choose one of existing dropbox in $DBOXES or all
+# choose one of existing $DBOX_BIN in $DBOXES or all
 function choose() {
 	local action="$1"
 	local dboxPath=""
@@ -121,8 +123,8 @@ function choose() {
 			if [ "$dboxPath" == all ] ; then
 				ret=1
 			else
-				run $action $dboxPath
 				RUN_COLOR="bwhiten"
+				run $action $dboxPath
 			fi
 			break
 		fi
@@ -148,10 +150,10 @@ function dbox_status() {
 
 	bcyan "Status : "
 	if [ -z "$pid" ] ; then
-		bcyann "dropbox $HOME is not running"
+		bredn "$DBOX_BIN $HOME is not running"
 		ret=1
 	else
-		bcyann "dropbox $HOME is running with pid $pid"
+		bcyann "$DBOX_BIN $HOME is running with pid $pid"
 	fi
 
 	return $ret
@@ -162,9 +164,9 @@ function dbox_exists() {
 	local ret=0
 	bmagenta "Exists : "
 	if [ -e "$bin" ] ; then
-		bmagentan "dropbox '$bin' environment exists"
+		bmagentan "$DBOX_BIN '$bin' environment exists"
 	else
-		bmagentan "dropbox '$bin' environment does not exist"
+		bmagentan "$DBOX_BIN '$bin' environment does not exist"
 		if (yesOrNo "do you want install it") ; then
 			dbox_install
 			ret=$?
@@ -179,9 +181,11 @@ function annonce() {
 }
 function issue() {
 	local issue="ERROR"
+	local cmd="bredn"
 	[ $1 -eq 0 ] \
-		&& issue="OK"
-	bcyann "$annonce $dboxPath $issue."
+		&& issue="OK" \
+		&& cmd="bcyann"
+	$cmd "$annonce $dboxPath $issue."
 }
 
 # run sub-functions
@@ -196,9 +200,80 @@ function dbox_stop() {
 	annonce
 	if (dbox_exists $dboxPath) ; then
 		if (dbox_status $dboxPath) ; then
-			dropbox stop
+			$DBOX_BIN stop
 			ret=$?
 		fi
+	fi
+	issue $ret
+	return $ret
+}
+function testVersion() {
+	local from=$1
+	local to=$2
+	local ret=1
+	local annonce="testing the versions"
+	annonce
+	if (echo "$from" | grep -qE "^[0-9]\.[0-9]\.[0-9]{1,3}$") ; then
+		if (echo "$to" | grep -qE "^[0-9]\.[0-9]\.[0-9]{1,3}$") ; then
+			eval "`echo "$from" | awk -F. '{print "fmaj="$1";fmin="$2";frev="$3}'`"
+			eval "`echo "$to" | awk -F. '{print "tmaj="$1";tmin="$2";trev="$3}'`"
+			#if [ $tmaj -gt $fmaj ]
+			#	|| ([ $tmaj -eq $fmaj ] && [ $tmin -gt $fmin ])
+			#	|| ([ $tmin -eq $fmin ] && [  $trev -gt $frev ])
+			#	ret=0
+			#else
+			#	echo $from is not -lt $to
+			#fi
+			if [ $tmaj -gt $fmaj ] ; then
+				ret=0
+			elif [ $tmaj -eq $fmaj ] ; then
+				if [ $tmin -gt $fmin ] ; then
+					ret=0
+				elif [ $tmin -eq $fmin ] ; then
+					if [ $trev -gt $frev ] ; then
+						ret=0
+					fi
+				fi
+			fi
+			[ $ret -ne 0 ] && bredn "$to ! -gt $from"
+		else
+			bredn "'$to' bad version format"
+		fi
+	else
+		bredn "'$from bad version format"
+	fi
+	issue $ret
+	return $ret
+}
+function dbox_update() {
+	local arch=`arch`
+	local system=`uname`
+	local ret=1
+	local version=""
+	local newVersion=""
+	local annonce="updating"
+	annonce
+	if [ $arch == "x86_64" -a "$system" == "Linux" ] ; then
+		cd $HOME
+		version=`cat $DIST_DIR/VERSION`
+		byellow "current version is "
+		bblue "$version, "
+		byellow "give me version you want to update : "
+		read newVersion
+		if (testVersion $version $newVersion) ; then
+			[ -d tmp ] || mkdir tmp
+			[ -d tmp/$DIST_DIR ] && rm tmp/$DIST_DIR
+			[ -d tmp ] \
+				&& cd tmp \
+				&& wget -O - "https://dl-web.dropbox.com/u/17/dropbox-lnx.x86_64-$newVersion.tar.gz" | tar xzf - \
+				&& cd $HOME \
+				&& rm -rf $DIST_DIR \
+				&& mv tmp/$DIST_DIR . \
+				&& rm -rf tmp
+			ret=$?
+		fi
+	else
+		bredn "unsupported arch '$arch' or system '$system'"
 	fi
 	issue $ret
 	return $ret
@@ -211,31 +286,27 @@ function dbox_install() {
 	local ret=0
 	local annonce="installing"
 	annonce
-	if (dbox_exists $dboxPath) ; then
-		$ret=1
-	else
-		dropbox start -i \
-		&& dropbox stop
-		ret=$?
-	fi
+	nice -n$NICE $DBOX_BIN start -i \
+	&& $DBOX_BIN stop
+	ret=$?
 	issue $ret
 	return $ret
 }
 function dbox_start() {
 	local ret=1
-	annonce="starting"
+	local annonce="starting"
 	annonce
 	if (dbox_exists $dboxPath) ; then
 		if !(dbox_status $dboxPath) ; then
 			if [ -e "$HOME/Dropbox" ] ; then
-				dropbox start
+				nice -n$NICE $DBOX_BIN start
 			else
 				bwhiten "$HOME/Dropbox not exists ... auth your '$dboxPath' account with following URL"
-				dropbox start \
+				$DBOX_BIN start \
 				&& bwhite "waiting 5s ... " \
 				&& sleep 5 \
 				&& bwhiten "& start twice" \
-				&& dropbox start
+				&& nice -n$NICE $DBOX_BIN start
 			fi
 			ret=$?
 		fi
@@ -271,6 +342,9 @@ function run() {
 	elif [ "$dboxPath" == "any" ] ; then
 		choose $action \
 			|| loop $action
+			RUN_COLOR="bwhiten"
+	elif [ "$dboxPath" == "all" ] ; then
+			loop $action
 	else
 		if [ ! -d "$HOME" ];then
 			if (yesOrNo "$HOME not seems to exist ... create it") ; then
@@ -288,8 +362,9 @@ function run() {
 			start)	dbox_start ;;
 			stop)		dbox_stop ;;
 			restart) dbox_restart ;;
-			install) dbox_install ;;
+			install) dbox_exists ;;
 			login)	dbox_login ;;
+			update)	dbox_update ;;
 
 			# the check commands
 			exists)	dbox_exists $dboxPath;;
@@ -306,6 +381,6 @@ function run() {
 if [ -z "$action" ] ; then
 	usage "action must be given" 3
 else
-	byellown "\n$line_asterisk\n$THIS : a Multiple dropbox instances interact Managment\n$line_asterisk"
+	byellown "\n$line_asterisk\n$THIS : a Multiple $DBOX_BIN instances interact Managment\n$line_asterisk"
 	run $action $dboxPath
 fi
