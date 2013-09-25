@@ -73,9 +73,22 @@ function evalColorFunction() {
 	export -f ${func}n
 }
 
+function evalBacgFunction() {
+	local pref="$1"
+	local func="$2"
+	local style="$3"
+	local bacg_var=""
+	for bacg_var in ${!BACKGROUND_*} ; do
+		bacg_func=${bacg_var##*_}
+		eval "bacg=\$$bacg_var"
+		evalColorFunction "${pref}${bacg_func}_${func}" "${bacg};${style}"
+	done
+}
+
 export -f printAndClear
 export -f printColor
 export -f evalColorFunction
+export -f evalBacgFunction
 
 
 
@@ -90,7 +103,7 @@ for style_var in ${!STYLE_*} ; do
 done
 
 #--------------------------------------------------------------------------------
-#  C O L O R S
+#  C O L O R S   W I T H   S T Y L E S   &   B A C K G R O U N D S
 #--------------------------------------------------------------------------------
 
 for color_var in ${!COLOR_*} ; do
@@ -102,9 +115,15 @@ for color_var in ${!COLOR_*} ; do
 		if [ ! -z "$pref" ] ; then
 			eval "style_var=\$$prefix"
 			eval "style=\$STYLE_$style_var"
+			# styled color
 			evalColorFunction "${pref}${func}" "${style};${color}"
+			# styled backgrounded color
+			evalBacgFunction "${pref}" "${func}" "${style};${color}"
 		else
+			# alone color
 			evalColorFunction "${pref}${func}" "${color}"
+			# backgrounded colors
+			evalBacgFunction "${pref}" "${func}" "${color}"
 		fi
 
 	done
