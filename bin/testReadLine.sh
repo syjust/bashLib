@@ -1,5 +1,7 @@
 #!/bin/bash
 
+RL_READ_COMMENT=0
+RL_COMMENT="//"
 . bashLib/lib/readLine.sh
 
 COUNT=0

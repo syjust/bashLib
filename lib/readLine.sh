@@ -39,3 +39,7 @@ function readLine() {
 	fi
 	return $ret
 }
+export -f testFile
+export -f readLine
+export RL_READ_COMMENT
+export RL_COMMENT

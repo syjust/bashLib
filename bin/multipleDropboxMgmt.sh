@@ -18,30 +18,20 @@ COLOR_LIB="bashLib/lib/color.sh"
 RUN_COLOR="bwhiten"
 NICE="19"
 
+# ================================================================================
+# LIBS
+# ================================================================================
+[ -e "$COLOR_LIB" ] && . $COLOR_LIB || (echo "missing $COLOR_LIB" && exit 2)
+
 # ************************************************************
 # USAGE_DETAILS
 # ************************************************************
-USAGE_DETAILS="
+USAGE_HEAD="
 $line_dash
 USAGE :
 $line_dash
-	$THIS action [dboxPath]
-
-	action can be :
-		* start
-		* stop
-		* retstart
-		* status
-		* login (exec bash in path)
-		* update (update $DBOX_BIN versions)
-		* install
-		* exists
-
-	default dboxPath is any (action is reported on a choosen dropboxe)
-	if choose is all (or dboxPath is all) action is recursively reported on a each one by one dropboxe
-	dboxPath are in $DBOX_DIR :
-	(`echo $DBOXES`)
-$line_dash"
+"
+USAGE_FOOT="$line_dash"
 #
 # ************************************************************
 
@@ -49,6 +39,14 @@ $line_dash"
 # ARGUMENTS
 # ================================================================================
 																																		
+
+# switch
+# ----------------------------------------
+output="1"
+case $1 in
+	-q|--quiet) output="/dev/null" ; shift ;;
+esac
+
 # action
 # ----------------------------------------
 action="$1"
@@ -62,10 +60,6 @@ action="$1"
 [ -z "$2" ] && dboxPath="any" || dboxPath="$2"
 
 
-# ================================================================================
-# LIBS
-# ================================================================================
-[ -e "$COLOR_LIB" ] && . $COLOR_LIB || (echo "missing $COLOR_LIB" && exit 2)
 # ================================================================================
 # FUNCTIONS
 # ================================================================================
@@ -98,7 +92,29 @@ function quit() {
 	exit $ret
 }
 function usage() {
-byellown "$USAGE_DETAILS"
+	local box=""
+byellown "$USAGE_HEAD"
+byellown "	$THIS [`bcyan switch``byellow "] "``bgreen action``byellow " ["``bblue dboxPath``byellow "]"`"
+byellown ""
+byellown "	switch can be :"
+byellown "		`bcyan "-q|--quiet"` `byellow "for output > /dev/null"` `bred "(be carreful when read needed !)"`"
+byellown "	action can be :"
+bgreenn "		* start"
+bgreenn "		* stop"
+bgreenn "		* retstart"
+bgreenn "		* status"
+bgreenn "		* login (exec bash in path)"
+bgreenn "		* update (update $DBOX_BIN versions)"
+bgreenn "		* install"
+bgreenn "		* exists"
+byellown ""
+byellown "	default dboxPath is `bblue any` `byellown "(action is reported on a choosen dropbox)"`"
+byellown "	if choose is `bblue all` `byellow "(or dboxPath is"` `bblue all``byellow ") action is recursively reported on each dropbox (one by one)"`"
+byellown "	dboxPath are in $DBOX_DIR :"
+for box in $DBOXES ; do
+	bbluen "		* $box"
+done
+byellown "$USAGE_FOOT"
 	if [ ! -z "$1" ] ; then
 		[ -z "$2" ] \
 		&& quit "$1" 0 \
@@ -332,6 +348,7 @@ function dbox_start() {
 # * dboxPath
 #
 function run() {
+	local ret=0
 	local action="$1"
 	local dboxPath="$2"
 	local HOME="$DBOX_DIR/$dboxPath"
@@ -359,16 +376,16 @@ function run() {
 		case $action in
 
 			# the runnable commands
-			start)	dbox_start ;;
-			stop)		dbox_stop ;;
-			restart) dbox_restart ;;
-			install) dbox_exists ;;
-			login)	dbox_login ;;
-			update)	dbox_update ;;
+			start)	dbox_start ; ret=$? ;;
+			stop)		dbox_stop ; ret=$? ;;
+			restart) dbox_restart ; ret=$? ;;
+			install) dbox_exists ; ret=$? ;;
+			login)	dbox_login ; ret=$? ;;
+			update)	dbox_update ; ret=$? ;;
 
 			# the check commands
-			exists)	dbox_exists $dboxPath;;
-			status)	dbox_status $dboxPath;;
+			exists)	dbox_exists $dboxPath; ret=$? ;;
+			status)	dbox_status $dboxPath; ret=$? ;;
 
 			# Usage & error
 			help|usage) usage "USAGE CALLED" ;;
@@ -376,11 +393,12 @@ function run() {
 		esac
 	fi
 	$RUN_COLOR "$line_dash\nEnd of run $action $dboxPath\n$line_dash\n"
+	return $ret
 }
 
 if [ -z "$action" ] ; then
 	usage "action must be given" 3
 else
-	byellown "\n$line_asterisk\n$THIS : a Multiple $DBOX_BIN instances interact Managment\n$line_asterisk"
-	run $action $dboxPath
+	byellown "\n$line_asterisk\n$THIS : a Multiple $DBOX_BIN instances interact Managment\n$line_asterisk" >&$output
+	run $action $dboxPath >&$output
 fi
