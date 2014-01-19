@@ -12,6 +12,8 @@
 # * implement multiple style
 
 [ -z "$COLORIZE" ] && COLORIZE=1
+# can be 'bash' or 'html'
+[ -z "$COLOR_TYPE" ] && COLOR_TYPE='bash'
 
 CHAR_ESC="\033"
 
@@ -21,6 +23,9 @@ PREFIX_bl="blink"
 PREFIX_u="underscore"
 PREFIX_r="reverse"
 PREFIX_c="cancel"
+
+# BASH VALUES
+# ===========
 
 STYLE_bold="01"
 STYLE_underscore="04"
@@ -46,10 +51,54 @@ BACKGROUND_magenta="45"
 BACKGROUND_cyan="46"
 BACKGROUND_white="47"
 
+# HTML VALUES
+# ===========
+HTML_STYLE_bold="b"
+HTML_STYLE_underscore="u"
+HTML_STYLE_blink="blink"
+HTML_STYLE_reverse=""
+HTML_STYLE_cancel=""
+
+HTML_COLOR_black="black"
+HTML_COLOR_red="red"
+HTML_COLOR_green="green"
+HTML_COLOR_yellow="yellow"
+HTML_COLOR_blue="blue"
+HTML_COLOR_magenta="magenta"
+HTML_COLOR_cyan="cyan"
+HTML_COLOR_white="white"
+
+HTML_BACKGROUND_black="black"
+HTML_BACKGROUND_red="red"
+HTML_BACKGROUND_green="green"
+HTML_BACKGROUND_yellow="yellow"
+HTML_BACKGROUND_blue="blue"
+HTML_BACKGROUND_magenta="magenta"
+HTML_BACKGROUND_cyan="cyan"
+HTML_BACKGROUND_white="white"
+
+
 #--------------------------------------------------------------------------------
 #  E C H O S    
 #--------------------------------------------------------------------------------
 
+function html() {
+	[ "x$COLOR_TYPE" == "xhtml" ]
+}
+# EVAL html OR bash
+# -----------------
+
+if (html) ; then
+	STYLES_VARS="${!HTML_STYLE_*}"
+	COLORS_VARS="${!HTML_COLOR_*}"
+	BACKGROUNDS_VARS="${!HTML_BACKGROUND_*}"
+	eval "function printColorn() { echo -e \"\$@<br/>\" ; }"
+else # this is bash type as default one (even if COLOR_TYPE is another that not specified here)
+	STYLES_VARS="${!STYLE_*}"
+	COLORS_VARS="${!COLOR_*}"
+	BACKGROUNDS_VARS="${!BACKGROUND_*}"
+	eval "function printColorn() { echo -e \"\$@\" ; }"
+fi
 function printAndClear() {
 	echo -en "$@"
 	tput sgr0
@@ -58,16 +107,56 @@ function printAndClear() {
 function printColor() {
 	echo -en "$1"
 }
+function printHtml() {
+	local styles_colors=(${1//;/ })
+	local content="$2"
+	local length=${#styles_colors[@]}
+	local bgcolor=""
+	local style=""
+	local color=""
+	case $length in
+		1) 
+			# test if style
+			if (echo "$styles_colors" | grep -qE "^(b|u|bliknk)$") ; then
+				echo "<$styles_colors>$content</$styles_colors>"
+			else # then is color
+				echo "<span style='color:$styles_colors'>$content</span>"
+			fi
+		;; 2)
+			style="${styles_colors[0]}"
+			color="${styles_colors[1]}"
+			echo "<span style='color:$color'><$style>$content</$style></span>"
+		;; 3)
+			bgcolor="${styles_colors[0]}"
+			style="${styles_colors[1]}"
+			color="${styles_colors[2]}"
+			echo "<span style='color:$color;background:$bgcolor'><$style>$content</$style></span>"
+		;; *)
+			echo "$content"
+		;;
+	esac
+}
 
 function evalColorFunction() {
 	local func="$1"
-	if [ $COLORIZE -ge 1 ] ; then
-		local style="$2"
-		eval "function ${func}() { printColor \"$CHAR_ESC[${style}m\" ; printAndClear \"\$@\" ; }"
-		eval "function ${func}n() { ${func} \"\$@\" ; echo ; }"
+	if (html) ; then
+		if [ $COLORIZE -ge 1 ] ; then
+			local style_color="$2"
+			eval "function ${func}() { printHtml \"$style_color\" \"\$@\" ; }"
+			eval "function ${func}n() { ${func} \"\$@\" ; echo \"<br/>\"; }"
+		else
+			eval "function ${func}() { echo \"\$@\" ; }"
+			eval "function ${func}n() { echo \"\$@<br/>\" ; }"
+		fi
 	else
-		eval "function ${func}() { echo -n \"\$@\" ; }"
-		eval "function ${func}n() { echo \"\$@\" ; }"
+		if [ $COLORIZE -ge 1 ] ; then
+			local style_color="$2"
+			eval "function ${func}() { printColor \"$CHAR_ESC[${style_color}m\" ; printAndClear \"\$@\" ; }"
+			eval "function ${func}n() { ${func} \"\$@\" ; echo ; }"
+		else
+			eval "function ${func}() { echo -n \"\$@\" ; }"
+			eval "function ${func}n() { echo \"\$@\" ; }"
+		fi
 	fi
 	export -f $func
 	export -f ${func}n
@@ -76,37 +165,41 @@ function evalColorFunction() {
 function evalBacgFunction() {
 	local pref="$1"
 	local func="$2"
-	local style="$3"
+	local style_color="$3"
 	local bacg_var=""
-	for bacg_var in ${!BACKGROUND_*} ; do
+	for bacg_var in ${BACKGROUNDS_VARS} ; do
 		bacg_func=${bacg_var##*_}
 		eval "bacg=\$$bacg_var"
-		evalColorFunction "${pref}${bacg_func}_${func}" "${bacg};${style}"
+		evalColorFunction "${pref}${bacg_func}_${func}" "${bacg};${style_color}"
 	done
 }
 
+export -f html
 export -f printAndClear
 export -f printColor
+export -f printColorn
+export -f printHtml
 export -f evalColorFunction
 export -f evalBacgFunction
 
 
-
 #--------------------------------------------------------------------------------
-#  S T Y L E S
+#  S T Y L E S   ( A L O N E )
 #--------------------------------------------------------------------------------
 
-for style_var in ${!STYLE_*} ; do
+for style_var in ${STYLES_VARS} ; do
 	func=${style_var##*_}
 	eval "style=\$$style_var"
-	evalColorFunction "${func}" "${style}"
+	if [ ! -z "$style" ] ; then
+		evalColorFunction "${func}" "${style}"
+	fi
 done
 
 #--------------------------------------------------------------------------------
 #  C O L O R S   W I T H   S T Y L E S   &   B A C K G R O U N D S
 #--------------------------------------------------------------------------------
 
-for color_var in ${!COLOR_*} ; do
+for color_var in ${COLORS_VARS} ; do
 	func=${color_var##*_}
 	eval "color=\$$color_var"
 
@@ -114,17 +207,21 @@ for color_var in ${!COLOR_*} ; do
 		pref=${prefix##*_}
 		if [ ! -z "$pref" ] ; then
 			eval "style_var=\$$prefix"
-			eval "style=\$STYLE_$style_var"
+			if (html) ; then
+				eval "style=\$HTML_STYLE_$style_var"
+			else
+				eval "style=\$STYLE_$style_var"
+			fi
 			# styled color
-			evalColorFunction "${pref}${func}" "${style};${color}"
-			# styled backgrounded color
-			evalBacgFunction "${pref}" "${func}" "${style};${color}"
+			style_color="${style};${color}"
 		else
 			# alone color
-			evalColorFunction "${pref}${func}" "${color}"
-			# backgrounded colors
-			evalBacgFunction "${pref}" "${func}" "${color}"
+			style_color="${color}"
 		fi
+		# alone
+		evalColorFunction "${pref}${func}" "${color}"
+		# backgrounded
+		evalBacgFunction "${pref}" "${func}" "${style_color}"
 
 	done
 
@@ -134,21 +231,21 @@ done
 #  T E E   W I T H O U T   C O L O R
 #--------------------------------------------------------------------------------
 
-# TODO: TEST (PREVIOUSLY DONT WORK !!)
-# ====================================
-function teeWithoutColor() {
-	local stdin=""
-	if [ -z $1 ] ; then
-		#echo "no file given"
-		while read stdin ; do
-			#echo -n "stdin: " 
-			echo "$stdin" | sed 's/[^m]*m//g;s/.$//'
-		done
-	else
-		echo "file given: $1"
-		while read stdin ; do
-			#echo -n "stdin: " 
-			echo "$stdin" | sed 's/[^m]*m//g;s/.$//' | tee -a "$1"
-		done
-	fi
-}
+## TODO: TEST (PREVIOUSLY DONT WORK !!)
+## ====================================
+#function teeWithoutColor() {
+#	local stdin=""
+#	if [ -z $1 ] ; then
+#		#echo "no file given"
+#		while read stdin ; do
+#			#echo -n "stdin: " 
+#			echo "$stdin" | sed 's/[^m]*m//g;s/.$//'
+#		done
+#	else
+#		echo "file given: $1"
+#		while read stdin ; do
+#			#echo -n "stdin: " 
+#			echo "$stdin" | sed 's/[^m]*m//g;s/.$//' | tee -a "$1"
+#		done
+#	fi
+#}
