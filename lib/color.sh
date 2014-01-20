@@ -105,7 +105,7 @@ function printAndClear() {
 }
 
 function printColor() {
-	echo -en "$1"
+	echo -en "$@"
 }
 function printHtml() {
 	local styles_colors=(${1//;/ })
