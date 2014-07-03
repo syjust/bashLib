@@ -4,7 +4,7 @@
 [ -z "$GAM_PY" ] && GAM_PY="python/gam/gam.py"
 
 for gamvar in ${!GAM_*} ; do
-	eval "var=\$$gambar"
+	eval "var=\$$gamvar"
 	if [ -z "$var" ] ; then
 		echo "$var is not set : exit"
 		exit 2
@@ -22,15 +22,25 @@ function listGroups() {
 }
 
 function listFromGroup() {
-	gam info group "$1"
+	local group="$1"
+	[ -z "$group" ] && group="$GAM_GROUP"
+	gam info group "$group"
 }
 
 function addToGroup() {
-	gam update group "$GAM_GROUP" add member "$1"
+	local member="$1"
+	local group="$2"
+	[ -z "$member" ] && echo "addToGroup need member as first arg" && exit 1
+	[ -z "$group" ] && group="$GAM_GROUP"
+	gam update group "$group" add member "$member"
 }
 
 function removeFromGroup() {
-	gam update group "$GAM_GROUP" remove member "$1"
+	local member="$1"
+	local group="$2"
+	[ -z "$member" ] && echo "removeFromGroup need member as first arg" && exit 1
+	[ -z "$group" ] && group="$GAM_GROUP"
+	gam update group "$group" remove member "$member"
 }
 
 export -f removeFromGroup
