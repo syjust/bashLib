@@ -219,7 +219,7 @@ for color_var in ${COLORS_VARS} ; do
 			style_color="${color}"
 		fi
 		# alone
-		evalColorFunction "${pref}${func}" "${color}"
+		evalColorFunction "${pref}${func}" "${style_color}"
 		# backgrounded
 		evalBacgFunction "${pref}" "${func}" "${style_color}"
 
