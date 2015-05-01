@@ -1,19 +1,24 @@
 #!/bin/bash
 
 # a beautiful script (in my opinion ;) ) using eval to colorize CLI
+#
 # USAGE : 
 #
 # ~> yellow "string" => echo a yellow string WITHOUT "\n"
 # ~> bredn "string" => echo a bold and red string with "\n"
 # ~> underscoren "string" => echo an underscore string with "\n"
 #
-# TODO:
-# * implement backgrounds
-# * implement multiple style
+# Note : loop and eval consume proc 
+# 			 so use the 'minproc' version for a procedural declaration
+#
 
+# can be 0 or 1
+# if 0 > all functions will be use echo instead of colorisation
+# Note : loop and eval consume proc
+#				 so if you want COLORIZE=0 > use 'fake' or 'fake-minproc' version
 [ -z "$COLORIZE" ] && COLORIZE=1
 # can be 'bash' or 'html'
-[ -z "$COLOR_TYPE" ] && COLOR_TYPE='bash'
+[ -z "$COLORTYPE" ] && COLORTYPE='bash'
 
 CHAR_ESC="\033"
 
@@ -83,7 +88,7 @@ HTML_BACKGROUND_white="white"
 #--------------------------------------------------------------------------------
 
 function html() {
-	[ "x$COLOR_TYPE" == "xhtml" ]
+	[ "x$COLORTYPE" == "xhtml" ]
 }
 # EVAL html OR bash
 # -----------------
@@ -93,7 +98,7 @@ if (html) ; then
 	COLORS_VARS="${!HTML_COLOR_*}"
 	BACKGROUNDS_VARS="${!HTML_BACKGROUND_*}"
 	eval "function printColorn() { echo -e \"\$@<br/>\" ; }"
-else # this is bash type as default one (even if COLOR_TYPE is another that not specified here)
+else # this is bash type as default one (even if COLORTYPE is another that not specified here)
 	STYLES_VARS="${!STYLE_*}"
 	COLORS_VARS="${!COLOR_*}"
 	BACKGROUNDS_VARS="${!BACKGROUND_*}"
