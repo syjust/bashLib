@@ -29,6 +29,8 @@ function readLine() {
 				done
 			elif [ $RL_READ_COMMENT -eq 1 ] ; then
 				while read line ; do
+					# uncomment this line for debug this function
+					#echo "RL: $func '$line'"
 					$func $line
 					ret=$(($ret+$?))
 				done < "$file"
