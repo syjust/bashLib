@@ -1,4 +1,5 @@
 #!/bin/bash
+# TODO: implement args as JSONpath query
 function noFile() {
 	local f="$@"
 	echo "I need a file as argument"
@@ -8,12 +9,17 @@ function noFile() {
 	exit 1
 }
 function jsonify() {
-	python -m json.tool "$@"
+	local file="$1"
+	shift
+	python -m json.tool "$file"
 }
-file="$@"
+file="$1"
+shift
+args="$@"
 if [ ! -z "$file" ] ; then
 	if [ -e "$file" ] ; then
-		jsonify "$file"
+		# Note args are not implemented
+		jsonify "$file" $args
 	else
 		noFile $file
 	fi
