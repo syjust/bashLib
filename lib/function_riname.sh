@@ -20,15 +20,24 @@ function riname() {
 			renamedFile="`
 				echo "$file" \
 					| sed "
-						s/[[:blank:]()'’_-]\{1,\}/_/g;
+						s/[[:blank:]()'’_¿-]\{1,\}/_/g;
 						s/à/a/g;
-						s/[éè]/e/g;
 						s/À/A/g;
-						s/[ÉÈ]/E/g;
+						s/[çç]/c/g;
+						s/[ÇÇ]/C/g;
+						s/[éèêêë]/e/g;
+						s/[ÉÈÊÊË]/E/g;
 						s/Ee/E/g;
 						s/ee/e/g;
+						s/[ôô]/o/g;
+						s/[ÔÔ]/O/g;
+						s/[ùûû]/u/g;
+						s/[ÙÛÛ]/U/g;
+						s/[ïïî]/i/g;
+						s/[ÏÏÎ]/I/g;
 					"
 			`"
+
 			if [ "$renamedFile" == "$file" ] ; then
 				echo "riname: nothing to do with '$file' -> '$renamedFile'" >&2
 			else
@@ -51,9 +60,12 @@ function riname() {
 		fi
 	fi
 }
+
 function driname() {
+	# Debug riname function
 	riname "$1" 1
 }
+
 function findAndRename() {
 	local dir="./"
 	local proof="1"
@@ -81,7 +93,9 @@ function findAndRename() {
 		echo "'$dir' is not a valid directory !!!" >&2
 	fi
 }
+
 function dfindAndRename() {
+	# Debug findAndRename function
 	findAndRename "$1" 1
 }
 
