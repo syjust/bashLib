@@ -25,8 +25,8 @@ function riname() {
 						s/À/A/g;
 						s/[çç]/c/g;
 						s/[ÇÇ]/C/g;
-						s/[éèêêë]/e/g;
-						s/[ÉÈÊÊË]/E/g;
+						s/[ééèêêë]/e/g;
+						s/[ÉÉÈÊÊË]/E/g;
 						s/Ee/E/g;
 						s/ee/e/g;
 						s/[ôô]/o/g;
@@ -86,8 +86,8 @@ function findAndRename() {
 			[ $i -gt $proof ] && proof=$i
 		done
 		for max in `seq 1 $proof` ; do
-			find ./ -mindepth $max -maxdepth $max -type d -exec bash -c 'riname "$0" "$1"' {} $debug \;
-			find ./ -mindepth $max -maxdepth $max -type f -exec bash -c 'riname "$0" "$1"' {} $debug \;
+			find ./ -mindepth $max -maxdepth $max ! -regex ".*\.git.*" -type d -exec bash -c 'riname "$0" "$1"' {} $debug \;
+			find ./ -mindepth $max -maxdepth $max ! -regex ".*\.git.*" -type f -exec bash -c 'riname "$0" "$1"' {} $debug \;
 		done
 	else
 		echo "'$dir' is not a valid directory !!!" >&2
