@@ -975,7 +975,7 @@ echo -n "ICMP-PING "
 echo
 
 echo -n "Allowing the rest of the ICMP messages in..."
-${IPTABLES} -t filter -A INETIN -p icmp --icmp-type ! echo-request -j ACCEPT
+${IPTABLES} -t filter -A INETIN -p icmp ! --icmp-type echo-request -j ACCEPT
 echo "done"
 
 
