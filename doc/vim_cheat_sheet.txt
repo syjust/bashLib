@@ -47,12 +47,14 @@ zR = ouvrir tousMles fold markers
   zR             : ouvre tous les blocs
   zM             : ferme tous les blocs
 - navigation (netrw) :
-	mf             : mark file under cursor
-	md             : diff files marked
-	%              : create new file
-	c              : make browsing directory the current directory
-	R              : rename file under the cursor
-	C-l            : refresh file list in current directory
+  mf             : mark file under cursor
+  md             : diff files marked
+  %              : create new file
+  c              : make browsing directory the current directory
+  R              : rename file under the cursor
+  D              : new directory
+  v              : split file or dir under cursor verticaly
+  C-l            : refresh file list in current directory
 - multifenetrage :
   C-w f          : ouvre le fichier ou le reperoire sous le curseur (split)
   C-w h          : next left window
@@ -119,7 +121,7 @@ zR = ouvrir tousMles fold markers
   :split ./         : ouvre le repertoire dans lequel vim a ete lance en mode horizontal
   :vert split /path/to/filename :
     ouvre un fichier mode vertical (un chemin relatif se base sur le path dans lequel est lance vim)
-		voir "c" pour changer le path courant en mode netrw (Hex / C-w f)
+    voir "c" pour changer le path courant en mode netrw (Hex / C-w f)
   :Ex               : ouvre le repertoire du fichier courant a la place du fichier courant
   :Hex              : ouvre le repertoire du fichier courant en split horizontal
   :Vex              : ouvre le repertoire du fichier courant en split Vertical
@@ -131,9 +133,9 @@ zR = ouvrir tousMles fold markers
   v   : surlignage normal
   V   : surlignage ligne a ligne
   C-v : surlignage en bloc
-		apres la selection en mode visuel
-		on peut passer en mode commande et
-		faire une action sur la selection :
+    apres la selection en mode visuel
+    on peut passer en mode commande et
+    faire une action sur la selection :
   :'<,'>s/lig/LIG/ (voir mode commande)
 }}}
 
