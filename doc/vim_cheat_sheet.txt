@@ -56,15 +56,22 @@ zR = ouvrir tousMles fold markers
   v              : split file or dir under cursor verticaly
   C-l            : refresh file list in current directory
 - multifenetrage :
-  C-w f          : ouvre le fichier ou le reperoire sous le curseur (split)
-  C-w h          : next left window
-  C-w j          : next bottom window
-  C-w k          : next top window
-  C-w l          : next right window
-  C-w H          : next left window
-  C-w J          : next bottom window
-  C-w K          : next top window
-  C-w L          : next right window
+  <C-w>f         : ouvre le fichier ou le reperoire sous le curseur (split)
+  <C-w>h         : next left window
+  <C-w>j         : next bottom window
+  <C-w>k         : next top window
+  <C-w>l         : next right window
+  <C-w>H         : next left window
+  <C-w>J         : next bottom window
+  <C-w>K         : next top window
+  <C-w>L         : next right window
+  <C-w>n         : new horizontal split (editing a new empty buffer)
+  <C-w>s         : split window horizontally (editing current buffer)
+  <C-w>v         : vsplit window vertically (editing current buffer)
+  <C-w>c         : close window
+  <C-w>o         : close all windows, leaving :only the current window open
+  <C-w>w         : go to next window
+  <C-w>p         : go to previous window
 - vimdiff :
   ]c             : next difference
   [c             : previous difference
