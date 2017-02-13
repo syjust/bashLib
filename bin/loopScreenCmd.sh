@@ -1,7 +1,9 @@
 #!/bin/bash
 # read a file with screen cmd and apply into current screen session
 
-. bashLib/lib/readline.sh
+if [ ! -z $BASH_LIB -a -d $BASH_LIB ] ; then
+  . $BASH_LIB/lib/readLine.sh
+fi
 
 function execScreenCmd () {
 	screen -X $@
