@@ -1,0 +1,55 @@
+#!/bin/bash
+echo
+[ -z "$BASH_LIB" ] && echo "bashLib path not found" && exit 1
+source $BASH_LIB/lib/color-minproc.sh
+
+quit() {
+  bredn $@
+  exit 1
+}
+
+launchScreen() {
+  local rc=~/.screen/${1}.screenrc
+  [ -e "$rc" ] || quit "$rc not found"
+  screen -x $1 > /dev/null 2>&1 || screen -S $1 -c $rc
+}
+
+killScreen() {
+  local s screens query continue
+  query="Which screen you want to kill ?"
+  continue=1
+
+  while [ $continue -eq 1 ] ; do
+    screens="`screen -list | grep -v -e '^[[:space:]]*$' | sed 's/ /-/g;s/\t/_/g;s/[()]//g' | grep -vE "(There-are-screens-on|Sockets-in-/var/run/screen)"`"
+    byellown "$query"
+    select s in $screens "exit" ; do
+      case $s in
+        exit) bwhiten "Bye Bye !" ; continue=0 ;;
+        '') bredn "Bad Guy !!!" ;;
+        *)
+ 
+          echo "$s" | {
+            IFS='_.' read b pid name hour stat
+            cyan "killing "
+            bwhite "$name - $pid"
+            cyan "\t$hour\t($stat) ... " \
+              && kill $pid \
+              && bwhiten "OK" \
+              || bredn "KO"
+          }
+        ;;
+      esac
+      break
+    done
+  done
+}
+
+if [ -z "$1" ] ; then
+  launchScreen main
+else
+  case $1 in
+    -k|--kill) killScreen ;;
+    *) launchScreen "$1" ;;
+  esac
+fi
+echo
