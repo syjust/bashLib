@@ -1,0 +1,124 @@
+GNU Screen Commands
+--------------------------------------------------------------------------------
+Author: Nathan Goulding
+Last Updated: 2008-12-09
+
+
+Startup options
+
+-r [pid.sessionname]    Resume an existing session
+-d [pid.sessionname]    Remotely detach an existing session
+-x [pid.sessionname]    Attach to a session which is already attached elsewhere
+-list, -ls              List currently running sessions, but do not start screen
+
+
+CTRL-a commands
+
+?       Show key bindings
+:       Enter a command line
+*       Show list of attached displays
+d       Detach
+x       Lock the screen
+
+c       Create a new window
+n,p     Switch to next,previous window (can also use SPACE,BACKSPACE)
+CTRL-a  Switch to most recent window
+0..9    Switch to window number 0..9
+A       Rename current window
+"       List all windows and choose one
+w       List all windows
+'       Prompt user to input window number or name (can enter partial match)
+
+C       Clear the current window
+K       Kill the process running in the current window
+i       Show info about the current window
+t       Show current system time, hostname, and load average
+m       Repeat the last message displayed in the message line
+v       Show version information
+H       Start/stop logging to file <screenlog.N>
+
+[       Enter copy mode
+]       Paste
+
+
+Copy Mode
+
+SPACE   Start or stop selecting a region to copy
+y       Mark from start of line
+Y       Mark one whole line
+W       Mark one whole word
+/,?     Forward,reverse search
+c,C     Set left,right column for copying a column of text
+x       Exchange the first mark with the current cursor position
+a       Append to the previous copy buffer
+A       Turns on append mode and starts a second mark
+CTRL-g  Get information about current line and column
+
+
+Window Splitting
+
+S       Split current window
+X       Close this split window
+Q       Close all split windows except this one
+TAB     Switch between regions
+j,k     Change focus up,down (requires special binding in .screenrc, see below)
+:focus [down,up,top,bottom]     Change focus
+:resize [+N,-N,N,=,max,min]     Resize regions
+
+
+Monitoring
+
+M                       Toggle activity monitoring for the current window
+:activity '<message>'   Display <message> when activity occurs (can use %
+                        to represent window number)
+:silence [state|sec]    Toggle monitoring for silence (inactivity) after
+                        sec number of seconds
+:defsilencewait sec     Set default silence wait period in seconds
+                        (default is 30 seconds)
+
+
+Registers and Buffers (a-z are registers, and . is the paste buffer)
+
+:readbuf [filename]
+(^a <)
+    Read contents of filename (default /tmp/screen-exchange) into paste buffer
+:writebuf [filename]
+(^a >)
+    Write paste buffer to filename (default /tmp/screen-exchange)
+:paste [register [destination]]
+    Write contents of register to destination file, or stdin if not specified
+    (default register is paste buffer)
+:readreg [register [filename]]
+    With 1 argument, duplicate paste buffer contents into register
+    With 2 arguments, read contents of filename into register
+:process [register]
+    Put contents of register into screen input queue, as if typed by user
+:register reg string
+    Save string to reg
+
+
+Miscellaneous Commands
+
+:number [N]
+    Change the current window's number to N if it is not in use, or switch
+    numbers with window N if it already exists
+:bind key [command [args]]
+    Bind key to command, with optional args (key must be a single character,
+    optionally preceded by a ^ for CTRL); unbind key if no command is specified
+
+
+Useful .screenrc Configuration File
+
+# Use Vim-like up and down for split windows
+bind j focus down
+bind k focus up
+
+# Increase the default size of the scrollback buffer
+defscrollback 10000
+
+# Turn off the startup copyright message
+startup_message off
+
+# Unbind s and CTRL-s (these send the XOFF signal, easy to type accidentally)
+bind s
+bind ^s
