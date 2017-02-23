@@ -9,6 +9,8 @@ quit() {
 }
 
 launchScreen() {
+  # Disallow main attach into screen session
+  [ "x$TERM" == "xscreen" -a "x$1" == "xmain" ] && quit "main attaching disallowed into a screen session"
   local rc=~/.screen/${1}.screenrc
   [ -e "$rc" ] || quit "$rc not found"
   screen -x $1 > /dev/null 2>&1 || screen -S $1 -c $rc
