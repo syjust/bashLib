@@ -1,0 +1,37 @@
+#!/bin/bash
+[ -z "$BASH_LIB" ] && echo "bashLib not found" && exit 1
+source $BASH_LIB/lib/helper.inc.sh || exit 1
+
+#ADDITIONAL_USERS="www-data"
+ADDITIONAL_USERS=""
+TTYS="`who -u | awk '{print $1"_"$2"_"$6"_"$NF}'`"
+SCREENS="`$BASH_LIB/bin/screen-short-ls $ADDITIONAL_USERS | awk -F_ '{print $2"_"$NF}'`"
+END_FORMAT="%-10s %8s %7s %8s:%-7s %8s %-40.40s (%s)\n"
+TMP_FORMAT="%s#%s#%s#%s#%s#%s#%s#%s\n"
+
+byellown "`printf "$END_FORMAT" NAME PPID PTS SCREEN SESS PID COMMANDS STATUS`"
+for t in $TTYS ; do
+  # sjust_pts/32_15645_(10:S.10)
+  echo "$t" | {
+    IFS=$'_/(:)' read name p pts pid e host sess
+    if [ ! -z $pid ] ; then
+
+      ppid="`ps --no-headers -o "ppid" -p $pid`"
+      [ -z "$ppid" ] && ppid=$pid
+
+      screen="`echo "$SCREENS" | grep $ppid`"
+      commands="'$(echo `ps --no-headers -o command -t $pts | sed 's#/bin/bash##g;s/$/ |/g;s/ /_/g;s/^\(_|\|| \|_\)//;s/_|$//g;'`)'"
+      if [ -z "$screen" ] ; then
+        screen="NO#SCREEN"
+        printf "$TMP_FORMAT" "$name" "XXX" "pts/$pts" "$screen"  "$pid" "$commands" "$t"
+      else
+        status="${screen##*_}"
+        screen="${screen%%_*}"
+        printf "$TMP_FORMAT" "$name" "$ppid" "pts/$pts" "${screen##*.}" "${sess/S./}" "$pid" "$commands" "$status"
+      fi
+    else
+      bredn "$t dont match any pid"
+    fi
+
+  }
+done | sort -t$'#' -k 1,1d -k 4,4d -k 5,5n | sed 's/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /g;' | xargs printf "$END_FORMAT"

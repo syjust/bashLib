@@ -1,12 +1,7 @@
 #!/bin/bash
 echo
 [ -z "$BASH_LIB" ] && echo "bashLib path not found" && exit 1
-source $BASH_LIB/lib/color-minproc.sh
-
-quit() {
-  bredn $@
-  exit 1
-}
+source $BASH_LIB/lib/helper.inc.sh
 
 launchScreen() {
   # Disallow main attach into screen session
@@ -22,7 +17,7 @@ killScreen() {
   continue=1
 
   while [ $continue -eq 1 ] ; do
-    screens="`screen -list | grep -v -e '^[[:space:]]*$' | sed 's/ /-/g;s/\t/_/g;s/[()]//g' | grep -vE "(There-are-screens-on|Sockets-in-/var/run/screen)"`"
+    screens="`$BASH_LIB/bin/screen-short-ls`"
     byellown "$query"
     select s in $screens "exit" ; do
       case $s in

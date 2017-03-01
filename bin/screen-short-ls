@@ -1,0 +1,23 @@
+#!/bin/bash
+[ -z "$BASH_LIB" ] && echo "bashLib not found" && exit 1
+
+source $BASH_LIB/lib/helper.inc.sh
+
+screenList() {
+ screen -ls
+ # check additonal users screen list (if you can...)
+ for u in $@ ; do
+   sudo -v -u $u > /dev/null 2>&1
+   if [ $? -eq 0 ] ; then
+     sudo -u $u screen -ls
+   else
+     bredn "can't list $u screen's sessions"
+   fi
+ done
+}
+
+case $KERNEL in
+  Linux) screenList $@ | grep -v -e '^[[:space:]]*$' | sed 's/ /-/g;s/\t/_/g;s/[()]//g' | grep -vE "(There-is-a-screen-on|There-are-screens-on|Sockets?-in-/var/run/screen|No-Sockets-found)";;
+  Darwin) screenList $@ | grep -v -e '^[[:space:]]*$' | sed 's/ /-/g;s/\\t/_/g;s/[()]//g' | grep -vE "(There-is-a-screen-on|There-are-screens-on|Sockets?-in-/var/run/screen|No-Sockets-found)";;
+  *) quit "'$KERNEL' : unsuported kernel"
+esac
