@@ -4,9 +4,10 @@
 #
 # USAGE : 
 #
-# ~> yellow "string" => echo a yellow string WITHOUT "\n"
-# ~> bredn "string" => echo a bold and red string with "\n"
-# ~> underscoren "string" => echo an underscore string with "\n"
+# ~> yellow "string" => echo a yellow "string" WITHOUT "\n"
+# ~> bredn "string" => echo a bold and red "string" with "\n"
+# ~> underscoren "string" => echo an underscore "string" with "\n"
+# ~> uwhite_red "string" => echo an underscore background white and red "string" WITHOUT "\n"
 #
 # Note : loop and eval consume proc 
 # 			 so use the 'minproc' version for a procedural declaration
