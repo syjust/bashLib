@@ -9,6 +9,11 @@ SCREENS="`$BASH_LIB/bin/screen-short-ls $ADDITIONAL_USERS | awk -F_ '{print $2"_
 END_FORMAT="%-10s %8s %7s %8s:%-7s %8s %-40.40s (%s)\n"
 TMP_FORMAT="%s#%s#%s#%s#%s#%s#%s#%s\n"
 
+#BWHITE_RED_COLOR=$'\033[47;01;31m'
+#RESET_COLOR=$'\e[0m'
+
+current_tty="`tty | sed 's#/dev/##'`"
+
 byellown "`printf "$END_FORMAT" NAME PPID PTS SCREEN SESS PID COMMANDS STATUS`"
 for t in $TTYS ; do
   # sjust_pts/32_15645_(10:S.10)
@@ -34,4 +39,8 @@ for t in $TTYS ; do
     fi
 
   }
-done | sort -t$'#' -k 1,1d -k 4,4d -k 5,5n | sed 's/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /;s/#/ /g;' | xargs printf "$END_FORMAT"
+done \
+  | sort -t$'#' -k 1,1d -k 4,4d -k 5,5n \
+  | sed 's/#/ /g' \
+  | xargs printf "$END_FORMAT" \
+  | sed 's#^\(.*'$current_tty'.*\)$#'$BWHITE_RED_COLOR'\1'$RESET_COLOR'#'
