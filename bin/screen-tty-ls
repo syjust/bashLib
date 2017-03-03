@@ -2,24 +2,27 @@
 [ -z "$BASH_LIB" ] && echo "bashLib not found" && exit 1
 source $BASH_LIB/lib/helper.inc.sh || exit 1
 
-#ADDITIONAL_USERS="www-data"
-ADDITIONAL_USERS=""
-TTYS="`who -u | awk '{print $1"_"$2"_"$6"_"$NF}'`"
-SCREENS="`$BASH_LIB/bin/screen-short-ls $ADDITIONAL_USERS | awk -F_ '{print $2"_"$NF}'`"
-END_FORMAT="%-10s %8s %7s %8s:%-7s %8s %-40.40s (%s)\n"
-TMP_FORMAT="%s#%s#%s#%s#%s#%s#%s#%s\n"
+#additional_users="root www-data"
+additional_users=""
+ttys="`who -u | awk '{print $1"_"$2"_"$6"_"$NF}'`"
+screens="`$BASH_LIB/bin/screen-short-ls $additional_users | awk -F_ '{print $2"_"$NF}'`"
+end_format="%-8.8s | %5.5s | %6.6s | %6.6s:%-2.2s | %5.5s | %-40.40s | %-30s\n"
+tmp_format="%s#%s#%s#%s#%s#%s#%s#%s\n"
 
-current_tty="`tty | sed 's#/dev/##'`"
+current_tty=$"`tty | sed 's#/dev/##'`"
+current_screen_color=$"${BCYAN_RED_COLOR}"
+current_session_color=$"${BCYAN_BLACK_COLOR}"
+sed_grep_color=$"${BRED_WHITE_COLOR}"
 
 if [ ! -z "$1" ] ; then
   what="`echo "${1//#/.}" | sed 's/\([()|]\)/\\\\\1/g'`"
-  sed_grep=$'s#\('${what}'\)#'${BBLUE_WHITE_COLOR}'\1#g;'
+  sed_grep=$'s#\('${what}'\)#'${sed_grep_color}'\1'$RESET_COLOR'#g;'
 else
   sed_grep=""
 fi
 
-byellown "`printf "$END_FORMAT" NAME PPID PTS SCREEN SESS PID COMMANDS STATUS`"
-for t in $TTYS ; do
+byellow_blackn "`printf "$end_format" NAME PPID PTS SCREEN SESS PID COMMANDS STATUS`"
+for t in $ttys ; do
   # sjust_pts/32_15645_(10:S.10)
   echo "$t" | {
     IFS=$'_/(:)' read name p pts pid e host sess
@@ -28,15 +31,15 @@ for t in $TTYS ; do
       ppid="`ps --no-headers -o "ppid" -p $pid`"
       [ -z "$ppid" ] && ppid=$pid
 
-      screen="`echo "$SCREENS" | grep $ppid`"
+      screen="`echo "$screens" | grep $ppid`"
       commands="'$(echo `ps --no-headers -o command -t $pts | sed 's#/bin/bash##g;s/$/ |/g;s/ /_/g;s/^\(_|\|| \|_\)//;s/_|$//g;'`)'"
       if [ -z "$screen" ] ; then
-        screen="NO#SCREEN"
-        printf "$TMP_FORMAT" "$name" "XXX" "pts/$pts" "$screen"  "$pid" "$commands" "$t"
+        screen="SCREEN#00"
+        printf "$tmp_format" "$name" "XXX" "pts/$pts" "$screen"  "$pid" "$commands" "$t"
       else
         status="${screen##*_}"
         screen="${screen%%_*}"
-        printf "$TMP_FORMAT" "$name" "$ppid" "pts/$pts" "${screen##*.}" "${sess/S./}" "$pid" "$commands" "$status"
+        printf "$tmp_format" "$name" "$ppid" "pts/$pts" "${screen##*.}" "${sess/S./}" "$pid" "$commands" "$status"
       fi
     else
       bredn "$t dont match any pid"
@@ -46,5 +49,7 @@ for t in $TTYS ; do
 done \
   | sort -t$'#' -k 1,1d -k 4,4d -k 5,5n \
   | sed 's/#/ /g' \
-  | xargs printf "$END_FORMAT" \
-  | sed 's#^\(.*'$current_tty'.*\)$#'$BWHITE_RED_COLOR'\1#;s#^\([^'$CHAR_ESC']\+\)\('${STY##*.}':[[:digit:]]\+\)#\1'$BRED_WHITE_COLOR'\2'$RESET_COLOR'#;'$sed_grep's#$#'$RESET_COLOR'#g;'
+  | xargs printf "$end_format" \
+  | sed $sed_grep'/'${current_tty//\//\\\/}'/{s#^#'${current_session_color}'#;s#'${RESET_COLOR//\[/\\\[}'#'${current_session_color}'#g;};' \
+  | sed 's#^\([^'$CHAR_ESC']\+\)\(|[[:blank:]]*'${STY##*.}':[[:digit:]]\+[[:blank:]]*|\)#\1'${current_screen_color}'\2'$RESET_COLOR'#;' \
+  | sed 's#$#'$RESET_COLOR'#g;'
