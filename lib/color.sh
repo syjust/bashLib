@@ -25,7 +25,7 @@
 # can be 'bash' or 'html'
 [ -z "$COLORTYPE" ] && COLORTYPE='bash'
 
-CHAR_ESC="\033"
+export CHAR_ESC=$'\e'
 
 PREFIX_=""
 PREFIX_b="bold"
@@ -87,7 +87,7 @@ HTML_BACKGROUND_magenta="magenta"
 HTML_BACKGROUND_cyan="cyan"
 HTML_BACKGROUND_white="white"
 
-RESET_COLOR=$'\e[0m'
+export RESET_COLOR=$'\e[0m'
 
 #--------------------------------------------------------------------------------
 #  E C H O S    
