@@ -1,0 +1,21 @@
+#!/bin/bash
+# new [development|common/release] branch
+[ -z "$BASH_LIB" ] && echo "bashLib path not found" && exit 1
+[ ! -e "$BASH_LIB/lib/helper.inc.sh" ] && echo "helper.inc.sh not found" && exit 1
+[ -e "$BASH_LIB/lib/helper.inc.sh" ] && source "$BASH_LIB/lib/helper.inc.sh"
+
+f() {
+  local dir="${1:-dev}" d="./"
+  shift
+  local b="${@}" date="`date "+%Y%m%d"`"
+  [ -z "$dir" -o -z "$b" ] && quit 'I need 2 args : "dir" and "branch name"'
+  case $dir in 
+    dev) d='development' ;;
+    rel) d='common/release' ;;
+    *)   quit "'$dir' : bad value for directory (only 'dev' & 'rel' are allowed)"; exit 1 ;;
+
+  esac 
+  git checkout -b $d/${date}_${b// /_}
+}
+
+f $@
