@@ -6,7 +6,7 @@ source $BASH_LIB/lib/color.sh
 # FUNCTIONS #
 #############
 quit(){
-  bredn -e "$@"
+  bredn -e "$@" | sed "s/\(\"[^\"]*\"\)/$BRED_WHITE_COLOR\\1$BBLACK_RED_COLOR/g;s/\('[^']*'\)/$BRED_WHITE_COLOR\\1$BBLACK_RED_COLOR/g;"
   exit 1
 }
 
