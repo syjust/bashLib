@@ -22,16 +22,13 @@ BAR="===========================================================================
 
 COLUMNS=`tput cols`
 if [ $COLUMNS -le 129 ] ; then
-  tables_names="Select_priv as S, Insert_priv as I, Update_priv as U, Delete_priv as D, Create_priv as C, Drop_priv as D, Grant_priv as G, References_priv as R, Index_priv as I, Alter_priv as A, Create_tmp_table_priv as C, Lock_tables_priv as L, Create_view_priv as C, Show_view_priv as S, Create_routine_priv as C, 
-Alter_routine_priv as A, Execute_priv as E, Event_priv as E, Trigger_priv as T"
+  tables_names="Select_priv as S, Insert_priv as I, Update_priv as U, Delete_priv as D, Create_priv as C, Drop_priv as D, Grant_priv as G, References_priv as R, Index_priv as I, Alter_priv as A, Create_tmp_table_priv as C, Lock_tables_priv as L, Create_view_priv as C, Show_view_priv as S, Create_routine_priv as C, Alter_routine_priv as A, Execute_priv as E, Event_priv as E, Trigger_priv as T"
   req="SELECT user,host,$tables_names FROM db WHERE db = '$db_name';"
 elif [ $COLUMNS -le 149 ] ; then
-  tables_names="Select_priv as S_, Insert_priv as I_, Update_priv as U_, Delete_priv as D_, Create_priv as C_, Drop_priv as Dr, Grant_priv as G_, References_priv as R_, Index_priv as Id, Alter_priv as A_, Create_tmp_table_priv as Ct, Lock_tables_priv as L_, Create_view_priv as Cv, Show_view_priv as Sh, Create_routi
-ne_priv as Cr, Alter_routine_priv as Ar, Execute_priv as Ex, Event_priv as Ev, Trigger_priv as T_"
+  tables_names="Select_priv as S_, Insert_priv as I_, Update_priv as U_, Delete_priv as D_, Create_priv as C_, Drop_priv as Dr, Grant_priv as G_, References_priv as R_, Index_priv as Id, Alter_priv as A_, Create_tmp_table_priv as Ct, Lock_tables_priv as L_, Create_view_priv as Cv, Show_view_priv as Sh, Create_routine_priv as Cr, Alter_routine_priv as Ar, Execute_priv as Ex, Event_priv as Ev, Trigger_priv as T_"
   req="SELECT user,host,$tables_names FROM db WHERE db = '$db_name';"
 else
-  tables_names="Select_priv as S_, Insert_priv as I_, Update_priv as U_, Delete_priv as D_, Create_priv as C_, Drop_priv as Dr, Grant_priv as G_, References_priv as R_, Index_priv as Id, Alter_priv as A_, Create_tmp_table_priv as Ct, Lock_tables_priv as L_, Create_view_priv as Cv, Show_view_priv as Sh, Create_routi
-ne_priv as Cr, Alter_routine_priv as Ar, Execute_priv as Ex, Event_priv as Ev, Trigger_priv as T_"
+  tables_names="Select_priv as S_, Insert_priv as I_, Update_priv as U_, Delete_priv as D_, Create_priv as C_, Drop_priv as Dr, Grant_priv as G_, References_priv as R_, Index_priv as Id, Alter_priv as A_, Create_tmp_table_priv as Ct, Lock_tables_priv as L_, Create_view_priv as Cv, Show_view_priv as Sh, Create_routine_priv as Cr, Alter_routine_priv as Ar, Execute_priv as Ex, Event_priv as Ev, Trigger_priv as T_"
   req="SELECT db,user,host,$tables_names FROM db WHERE db LIKE '%$db_name%';"
 fi
 
