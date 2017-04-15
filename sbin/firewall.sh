@@ -57,14 +57,15 @@ LAN_IFACE=""
 INTERNAL_LAN=""
 MASQ_LAN=""
 SNAT_LAN=""
-DROP="TREJECT"
-DENY_ALL=""
-DENY_HOSTWISE_TCP=""
-DENY_HOSTWISE_UDP=""
-BLACKHOLE=""
+#Blackholes will not be overridden by hostwise allows
+BLACKHOLE=""          # accept only single ip list (separated by space)
+BLACKHOLE_MAC=""      # accept only single mac list (separated by space)
 BLACKHOLE_DROP="DROP"
-#ALLOW_HOSTWISE_TCP=""
-ALLOW_HOSTWISE_TCP=""
+DROP="TREJECT"        # policy used for DENY rules
+DENY_ALL=""           # accept host range (src_host<dest_host [...])
+DENY_HOSTWISE_TCP=""  # accept host range (src_host>port-port<dest_host [...]), common use = src_host>port
+DENY_HOSTWISE_UDP=""
+ALLOW_HOSTWISE_TCP="" # same behavior as deny_
 ALLOW_HOSTWISE_UDP=""
 TCP_FW=""
 UDP_FW=""
@@ -627,7 +628,16 @@ if [ "$DENY_ALL" != "" ] ; then
   echo
 fi
 
-
+if [ "$BLACKHOLE_MAC" != "" ] ; then
+  echo -n "Blackholes mac addresses: "
+  for mac in ${BLACKHOLE_MAC} ; do
+    ${IPTABLES} -t filter -A INPUT -m mac --mac-source ${mac} -j ${BLACKHOLE_DROP}
+    ${IPTABLES} -t filter -A FORWARD -m mac --mac-source ${mac} -j ${BLACKHOLE_DROP}
+    echo -n "${mac} "
+  done
+  echo
+fi
+/sbin/iptables -A INPUT -m mac --mac-source 00:0F:EA:91:04:08 -j DROP
 
 if [ "$DENY_HOSTWISE_TCP" != "" ] ; then
   echo -n "Hostwise TCP Denies: "
