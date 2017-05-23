@@ -1,0 +1,41 @@
+#!/bin/bash
+quit(){
+  echo "ERROR: $@"
+  exit 1
+}
+
+debug=0
+blame_options=""
+from_commit=""
+
+while [ ! -z "$1" ] ; do
+  case $1 in
+    -L) [ ! -z "$2" ] && blame_options="-L $2" || quit "-L need valid arguments (@see git-blame man page)" ; shift 2 ;;
+    -c|--commit)
+      [ ! -z "$2" ] \
+        && from_commit="$2" \
+        || quit "--commit need valid commit sha-one"
+      shift 2
+      ;;
+    -d) debug=1 ; shift ;;
+    -*) quit "'$1' not supported by git-trace for moment" ;;
+    *) break ;;
+  esac
+done
+
+[ -z "$1" ] && quit "I need a file as argument to continue"
+[ -e $1 ] && file="$1" || quit "'$1' file not found"
+
+for commit in `git log $from_commit -- $file | awk '$1 ~ /commit/ {print $NF}'` ; do
+  echo "================================================================================"
+  echo $commit
+  echo "================================================================================"
+  if [ $debug -eq 1 ] ; then
+    echo "git blame $blame_options $commit -- $file"
+  else
+    git blame $blame_options $commit -- $file
+  fi
+  echo
+  echo "press enter to continue..."
+  read
+done
