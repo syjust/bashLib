@@ -1,4 +1,26 @@
 #!/bin/bash
+
+#===================================================================================================
+#
+# This script isplay screen and sub-screen list with :
+# * PID,
+# * PPID,
+# * PTS,
+# * Username,
+# * cmd
+# * ... (see todo bellow for future features)
+#
+# @todo :
+# * retrieve windows name from main,
+# * add main window_numbers before each sub-screen session name
+# * then foreach sub-screen session :
+#   - add window_name after window number
+# @see CMD Bellow :
+# * screen -x main -Q windows | sed 's/\$ /_/g;s/$/\r\n/;s/[[:blank:]]\{1,\}/\r\n/g;s/[\*\-]*_/_/g'
+# * /!\ NOTE : suppress hardstatus when calling `screen -Q`
+#
+#===================================================================================================
+
 [ -z "$BASH_LIB" ] && echo "bashLib not found" && exit 1
 source $BASH_LIB/lib/helper.inc.sh || exit 1
 
@@ -53,3 +75,8 @@ done \
   | sed $sed_grep'/'${current_tty//\//\\\/}'/{s#^#'${current_session_color}'#;s#'${RESET_COLOR//\[/\\\[}'#'${current_session_color}'#g;};' \
   | sed 's#^\([^'$CHAR_ESC']\+\)\(|[[:blank:]]*'${STY##*.}':[[:digit:]]\+[[:blank:]]*|\)#\1'${current_screen_color}'\2'$RESET_COLOR'#;' \
   | sed 's#$#'$RESET_COLOR'#g;'
+
+## Last 3 SED's explanation
+ # current session
+ # current screen
+ # EOL
