@@ -1,0 +1,49 @@
+#!/bin/bash
+
+DEFAULT_LOG_OPTIONS="--abbrev=8 --abbrev-commit --date=iso"
+FORMAT="format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue)<%an>%Creset"
+
+log_options=""
+short=0
+not=0
+action="$1"
+shift
+
+# get options
+while true ; do
+  case $1 in
+    -g|--graph) log_options="$log_options --graph" ; shift ;;
+    -a|--all)   log_options="$log_options --all" ; shift ;;
+    -s|--short) short=1 ; shift ;;
+    *) break;
+  esac
+done
+
+case $action in
+  # log not in origin/develop (default behavior)
+  --not)
+    not=1
+    git_log_not() {
+      local rev="${1:-HEAD}" b="${2:-origin/develop}"
+      echo "# commit in 1:'$rev' but not in 2:'$b'"
+      git log $DEFAULT_LOG_OPTIONS --pretty="$FORMAT" $rev --not $b;
+    }
+  ;;
+esac
+
+git_log() {
+  git log $DEFAULT_LOG_OPTIONS --pretty="$FORMAT" $log_options $@
+}
+
+if [ $not -eq 1 ] ; then
+  gitl="git_log_not"
+else
+  gitl="git_log"
+fi
+
+if [ $short -eq 1 ] ; then
+  $gitl $@ \
+    | sed 's/ BRANCH.*LEVEL = .//;s/COMMENT = //;' | less -R
+else
+  $gitl $@
+fi
