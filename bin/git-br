@@ -127,9 +127,7 @@ case "$action" in
 
   -p|--pwd)
     f() {
-      git branch \
-        | grep -E '^\\*' \
-        | awk '{print $NF}'
+      git reflog | awk '$3 ~ /checkout/ {print $8}' | head -n1
     }
   ;;
 
