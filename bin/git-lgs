@@ -1,2 +1,0 @@
-#!/bin/bash
-git lg $1 | sed 's/ BRANCH.*LEVEL = .//;s/COMMENT = //;' | less -R
