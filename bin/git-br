@@ -34,6 +34,7 @@ done
 # define format with custom options #
 #####################################
 if [ $porcelainify -eq 1 ] ; then
+  #'%(refname:short) <%(authorname)> (%(committerdate:short))'
   REF='%(refname:short)'
   AUTH='<%(authorname)>'
   DATE='(%(committerdate:short))'
@@ -51,34 +52,41 @@ FORMAT="$REF $AUTH $DATE"
 # define default function by action #
 #####################################
 case "$action" in
-  -wp|--whop)
+  --relu|--release-unmerged)
     f() {
-      $0 --who --porcelain $1 $2
+      $0 --who . remotes/origin/develop refs/remotes/origin/common/release
+    }
+  ;;
+
+  --wp|--whop|--who-porcelain)
+    f() {
+      $0 --who --porcelain $1 $2 $3
     }
   ;;
 
   -w|--who)
     f() {
       local w="${1}"
-      local b=${2:-remotes/origin/develop}
-      local path='refs/remotes/origin/developments'
+      [ "x*" == "x$w" ] && w=""
+      local b="${2:-remotes/origin/develop}"
+      local path="${3:-refs/remotes/origin/developments}"
       git for-each-ref --no-merge $b --format="$FORMAT" "$path" \
-        | sort | grep "$w";
+        | sort | egrep "$w";
     }
   ;;
 
   #m9 shortified (without origin / without name)
-  --m8)
+  --m8|--mine-short-porcelain)
     f() {
-      $0 --who --porcelain --short "$NAME" \
+      $0 --who --porcelain --short "$NAME" "$1" \
         | sed 's_^origin/\([^[:blank:]]*\).*$_\1_'
     }
   ;;
 
   #mine without color
-  --m9)
+  --m9|--mine-porcelain)
     f() {
-      $0 --who --porcelain "$NAME" $1
+      $0 --who --porcelain "$NAME" "$1"
     }
   ;;
 
@@ -88,14 +96,14 @@ case "$action" in
     }
   ;;
 
-  --switch)
+  --sw|--switch)
     f() {
       local d=${1-1}
       git checkout `git br --old $d`;
     }
   ;;
 
-  --history|--switch-history)
+  --swh|--history|--switch-history)
     f() {
       [ -x "$BASH_LIB/bin/odd-color.sh" ] \
         && output="$BASH_LIB/bin/odd-color.sh" \
@@ -108,7 +116,7 @@ case "$action" in
       }
   ;;
 
-  -o|--old)
+  -o|--old|--old-pwd)
     f() {
       local d=${1:-1}
       git reflog | awk '$3 ~ /checkout/ {print $6}' \
