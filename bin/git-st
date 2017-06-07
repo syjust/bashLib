@@ -1,0 +1,44 @@
+#!/bin/bash
+
+git_status(){
+  git status --short --branch $@
+}
+
+git_status_filter(){
+  if [ $view_all -eq 1 ] ; then
+    git_status | gawk '$1 ~ /'"$1"'/'
+  else
+    git_status | gawk '$1 ~ /'"$1"'/ {print $2}'
+  fi
+}
+
+view_all=0
+while true ; do
+  case $1 in
+    -v|--view) view_all=1 ; shift ;;
+    *) break ;;
+  esac
+done
+case $1 in
+  -*v)
+    $0 --view ${1/v/}
+  ;;
+  --stu|-u|--unmerged)
+    git_status_filter "^U"
+  ;;
+  --stm|-m|--modified)
+    git_status_filter "^M"
+  ;;
+  --sta|-a|--added)
+    git_status_filter "^A"
+  ;;
+  --std|-d|--deleted)
+    git_status_filter "^D"
+  ;;
+  --s2a|-2a|--2a|--to-add)
+    git_status_filter $"\\?"
+  ;;
+  -s|--st|--tst|--s|*)
+    git_status $@
+  ;;
+esac
