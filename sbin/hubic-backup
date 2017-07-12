@@ -1,0 +1,64 @@
+#!/bin/bash
+#{{{
+# download hubic-backup from github
+# https://github.com/frachop/hubic-backup
+#Usage: hubic-backup [OPTIONS]
+#
+#general:
+#  -h [ --help ]                      this message
+#  -v [ --version ]                   display version infos
+#  --loglevel arg (=trace)            select the log level. ('trace', 'debug', 
+#                                     'info', 'notice', 'warning', 'error', 
+#                                     'critical', 'alert' or 'emerg')
+#
+#auth:
+#  -l [ --login ] arg                 hubic login
+#  -p [ --pwd ] arg                   hubic password
+#
+#source:
+#  -i [ --src ] arg                   source folder
+#  -x [ --excludes ] arg              optional exclude file list path
+#  --fingerprint-md5                  force local md5 computation to compare 
+#                                     with destination file. CPU expansive
+#
+#destination:
+#  -c [ --container ] arg (=default)  destination hubic container
+#  -o [ --dst ] arg                   destination folder
+#  -k [ --crypt-password ] arg        optional crypto password
+#  -d [ --del-non-existing ]          allow deleting non existing backup files
+#}}}
+
+# Mail & Output options
+# =====================
+LOG="hubic-backup.log"
+MAIL="XXX@XX.XX"
+
+# HUBIC options
+# =============
+user="XXX@XX.XX"
+pass="HUBIC_PASSWORD"
+local_path="/var/lib/vz/vzdump/dump/"
+remote_path="bds_backups"
+#level="notice" # empty message :(
+level="info" # WARNING : verbose !!!
+
+#
+# Backup function
+#
+function backup() {
+	hubic-backup \
+		--loglevel $level \
+		--excludes <(echo "*log") \
+		--login $user \
+		--pwd $pass \
+		--src $local_path \
+		--dst $remote_path
+}
+
+##############
+# RUN SCRIPT #
+##############
+
+backup > $LOG \
+	&& cat $LOG | mail -s "hubic-backup SUCCESS" $MAIL >/dev/null 2>&1 \
+	|| cat $LOG | mail -s "hubic-backup ERROR"   $MAIL >/dev/null 2>&1
