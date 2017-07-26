@@ -14,6 +14,10 @@ while true ; do
   case $1 in
     -g|--graph) log_options="$log_options --graph" ; shift ;;
     -a|--all)   log_options="$log_options --all" ; shift ;;
+    -p|--porcelain)
+      FORMAT="format:%h -%d %s (%cd) <%an>"
+      shift
+    ;;
     -s|--short) short=1 ; shift ;;
     *) break;
   esac
