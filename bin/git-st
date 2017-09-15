@@ -5,10 +5,12 @@ git_status(){
 }
 
 git_status_filter(){
+  local filter=$"$1"
+  shift
   if [ $view_all -eq 1 ] ; then
-    git_status | gawk '$1 ~ /'"$1"'/'
+    git_status $@ | gawk '$1 ~ /'$"$filter"'/'
   else
-    git_status | gawk '$1 ~ /'"$1"'/ {print $2}'
+    git_status $@ | gawk '$1 ~ /'$"$filter"'/ {print $2}'
   fi
 }
 
@@ -24,21 +26,27 @@ case $1 in
     $0 --view ${1/v/}
   ;;
   --stu|-u|--unmerged)
-    git_status_filter "^U"
+    shift
+    git_status_filter "^U" $@
   ;;
   --stm|-m|--modified)
-    git_status_filter "^M"
+    shift
+    git_status_filter "^M" $@
   ;;
   --sta|-a|--added)
-    git_status_filter "^A"
+    shift
+    git_status_filter "^A" $@
   ;;
   --std|-d|--deleted)
-    git_status_filter "^D"
+    shift
+    git_status_filter "^D" $@
   ;;
   --s2a|-2a|--2a|--to-add)
-    git_status_filter $"\\?"
+    shift
+    git_status_filter $"\\?" $@
   ;;
   -s|--st|--tst|--s|*)
+    shift
     git_status $@
   ;;
 esac
