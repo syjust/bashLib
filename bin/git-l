@@ -6,8 +6,6 @@ FORMAT="format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue)
 log_options=""
 short=0
 not=0
-action="$1"
-shift
 
 # get options
 while true ; do
