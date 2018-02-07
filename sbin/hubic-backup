@@ -1,4 +1,5 @@
 #!/bin/bash
+# make hubic backup and send email notifications with error or success
 #{{{
 # download hubic-backup from github
 # https://github.com/frachop/hubic-backup
@@ -30,6 +31,7 @@
 
 # Mail & Output options
 # =====================
+# please : write logrotate rules for this files
 admin_mail="XXX@XX.XX"
 hub_log_dir="/var/log/hubic"
 hub_log="$hub_log_dir/backup.log"
