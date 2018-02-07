@@ -53,7 +53,6 @@ bar="###########################################################################
 #
 function title() {
   echo $bar
-  #echo -e `echo "$1" | tr [[:lower:]] [[:upper:]] | sed -s 's/\(.{80}\)/\1\\n/g'` | printf '# %-80s #' -
   printf "# %-80s #\n" "$1"
   echo $bar
 }
@@ -82,9 +81,6 @@ clean() {
   local _90=$(($_now-(90*3600*24)))
   local _90_fmt=`date -d @$_90 +%Y%m%d%H%M.%S`
   touch -t $_90_fmt /tmp/timer
-  #date -d @$_now
-  #date -d @$_90
-  #ls -l /tmp/timer
   find $local_path ! -newer /tmp/timer -exec rm -v {} \;
 }
 
