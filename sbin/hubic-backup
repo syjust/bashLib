@@ -124,17 +124,30 @@ rotate() {
   fi
 }
 
+#
+# quit with error status and send error email
+#
+quit() {
+  echo "$1" | mail -s "$subject" $admin_mail >> $mail_log  2>&1
+  exit 1
+}
+
 ##############
 # RUN SCRIPT #
 ##############
 
+[ -d $local_path ] || quit "'$local_path' local path not found"
+[ -x $hub_bin ]    || quit "'$hub_bin' hubic backup binary not found or not executable"
+
 rotate    $hub_log
 clean   > $hub_log
 backup >> $hub_log 2>&1
-if [ $? -eq 0 ] ; then
-  subject="[BDS/MF]: hubic-backup SUCCESS"
+backup_return=$?
+if [ $backup_return -eq 0 ] ; then
+  subject="[`hostname`]: hubic-backup SUCCESS"
 else
-  subject="[BDS/MF]: hubic-backup ERROR"
+  subject="[`hostname`]: hubic-backup ERROR"
 fi
 
-extractLogs $hub_log | mail -s "$subject" $admin_mail >> $mail_log  2>&1
+extractLogs $hub_log | mail -s "$subject" $admin_mail >> $mail_log 2>&1
+exit $backup_return
