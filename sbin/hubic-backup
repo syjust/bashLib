@@ -52,40 +52,40 @@ bar="###########################################################################
 # write title on stdout
 #
 function title() {
-	echo $bar
-	#echo -e `echo "$1" | tr [[:lower:]] [[:upper:]] | sed -s 's/\(.{80}\)/\1\\n/g'` | printf '# %-80s #' -
-	printf "# %-80s #\n" "$1"
-	echo $bar
+  echo $bar
+  #echo -e `echo "$1" | tr [[:lower:]] [[:upper:]] | sed -s 's/\(.{80}\)/\1\\n/g'` | printf '# %-80s #' -
+  printf "# %-80s #\n" "$1"
+  echo $bar
 }
 
 #
 # Backup function
 #
 function backup() {
-	title "sync local backup with hubic"
-	$hub_bin \
-		--loglevel $hub_level \
-		--excludes <(echo "*log") \
-		--login $hub_user \
-		--pwd $hub_pass \
-		--src $local_path \
-		--del-non-existing \
-		--dst $remote_path
+  title "sync local backup with hubic"
+  $hub_bin \
+    --loglevel $hub_level \
+    --excludes <(echo "*log") \
+    --login $hub_user \
+    --pwd $hub_pass \
+    --src $local_path \
+    --del-non-existing \
+    --dst $remote_path
 }
 
 #
 # remove old archives
 #
 clean() {
-	title "remove old archives"
-	local _now=`date +%s`
-	local _90=$(($_now-(90*3600*24)))
-	local _90_fmt=`date -d @$_90 +%Y%m%d%H%M.%S`
-	touch -t $_90_fmt /tmp/timer
-	#date -d @$_now
-	#date -d @$_90
-	#ls -l /tmp/timer
-	find $local_path ! -newer /tmp/timer -exec rm -v {} \;
+  title "remove old archives"
+  local _now=`date +%s`
+  local _90=$(($_now-(90*3600*24)))
+  local _90_fmt=`date -d @$_90 +%Y%m%d%H%M.%S`
+  touch -t $_90_fmt /tmp/timer
+  #date -d @$_now
+  #date -d @$_90
+  #ls -l /tmp/timer
+  find $local_path ! -newer /tmp/timer -exec rm -v {} \;
 }
 
 #
@@ -93,25 +93,20 @@ clean() {
 # extract only useful informations from hubi logs & format it as html
 #
 extractLogs() {
-	local file="$1" _1 _2 _3 _t
-	if [ -e $file ] ; then
-		echo "<pre>"
-   # total lines
-		_t="`cat $file | wc -l`"
-		# first --
-		_1="`grep -n -m1   '\-\-$' $file | awk -F: '{print $1}'`"
-		head -n$(($_1-1)) $file
-		# last ----- Summary -----
-		_2="`grep -n -m1 'Summary' $file | awk -F: '{print $1}'`"
-   if [ ! -z "$_2" ] ; then
-     # total - last
-		  _3="$(($_t-$_2))"
-		  tail -n$(($_3+1)) $file
-   fi
-		echo "</pre>"
-	else
-		echo "<span color='red'>'$file': file not found !!!<span>"
-	fi
+  local file="$1" _1 _2 _3 _t
+  if [ -e $file ] ; then
+    # first --
+    _t="`cat $file | wc -l`"
+    _1="`grep -n -m1   '\-\-$' $file | awk -F: '{print $1}'`"
+    _2="`grep -n -m1 'Summary' $file | awk -F: '{print $1}'`"
+    _3="$(($_t-$_2))"
+    echo "<pre>"
+    head -n$(($_1-1)) $file
+    tail -n$(($_3+1)) $file
+    echo "</pre>"
+  else
+    echo "<span color='red'>'$file': file not found !!!<span>"
+  fi
 }
 
 #
@@ -119,16 +114,16 @@ extractLogs() {
 # if file exists & is not empty
 #
 rotate() {
-	local file="$1" d content=""
-	if [ -e "$file" ] ; then
-		content="`cat $file`"
-		if [ ! -z "$content" ] ; then
-			d="`date -f $file "+%Y%m%d%H%M%S"`"
-			cat $file | gzip > ${file}.${d}.gz >/dev/null 2>&1 \
-				&& rm $file \
-				&& touch $file
-		fi
-	fi
+  local file="$1" d content=""
+  if [ -e "$file" ] ; then
+    content="`cat $file`"
+    if [ ! -z "$content" ] ; then
+      d="`date -f $file "+%Y%m%d%H%M%S"`"
+      cat $file | gzip > ${file}.${d}.gz >/dev/null 2>&1 \
+        && rm $file \
+        && touch $file
+    fi
+  fi
 }
 
 ##############
@@ -139,9 +134,9 @@ rotate    $hub_log
 clean   > $hub_log
 backup >> $hub_log 2>&1
 if [ $? -eq 0 ] ; then
-	subject="[BDS/MF]: hubic-backup SUCCESS"
+  subject="[BDS/MF]: hubic-backup SUCCESS"
 else
-	subject="[BDS/MF]: hubic-backup ERROR"
+  subject="[BDS/MF]: hubic-backup ERROR"
 fi
 
 extractLogs $hub_log | mail -s "$subject" $admin_mail >> $mail_log  2>&1
