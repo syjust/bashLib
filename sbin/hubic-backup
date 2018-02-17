@@ -36,6 +36,7 @@ admin_mail="XXX@XX.XX"
 hub_log_dir="/var/log/hubic"
 hub_log="$hub_log_dir/backup.log"
 mail_log="$hub_log_dir/backup-mail.log"
+ts_bin="/usr/bin/ts"
 [ ! -d $hub_log_dir ] && mkdir -p $hub_log_dir
 
 # HUBIC options
@@ -86,6 +87,11 @@ clean() {
   find $local_path ! -newer /tmp/timer -exec rm -v {} \;
 }
 
+is_num() {
+  local arg="$1"
+  [ ! -z "$arg" ] && [ $arg -eq $arg ] 2>/dev/null
+}
+
 #
 # extractLogs
 # extract only useful informations from hubi logs & format it as html
@@ -97,13 +103,19 @@ extractLogs() {
     _t="`cat $file | wc -l`"
     _1="`grep -n -m1   '\-\-$' $file | awk -F: '{print $1}'`"
     _2="`grep -n -m1 'Summary' $file | awk -F: '{print $1}'`"
-    _3="$(($_t-$_2))"
     echo "<pre>"
-    head -n$(($_1-1)) $file
-    tail -n$(($_3+1)) $file
+    if (is_num "$_1" && is_num "$_2") ; then
+      _3="$(($_t-$_2))"
+      head -n$(($_1-1)) $file
+      tail -n$(($_3+1)) $file
+    else
+      echo "<span color='red'>log file parse error : Summary or separator -- not found</span>"
+      cat $file
+      echo "<span color='red'>log file parse error : Summary or separator -- not found</span>"
+    fi
     echo "</pre>"
   else
-    echo "<span color='red'>'$file': file not found !!!<span>"
+    echo "<span color='red'>'$file': file not found !!!</span>"
   fi
 }
 
@@ -116,10 +128,9 @@ rotate() {
   if [ -e "$file" ] ; then
     content="`cat $file`"
     if [ ! -z "$content" ] ; then
-      d="`date -f $file "+%Y%m%d%H%M%S"`"
+      d="`date -r $file "+%Y%m%d%H%M%S"`"
       cat $file | gzip > ${file}.${d}.gz >/dev/null 2>&1 \
-        && rm $file \
-        && touch $file
+        && echo -n > $file
     fi
   fi
 }
@@ -128,16 +139,19 @@ rotate() {
 # quit with error status and send error email
 #
 quit() {
-  echo "$1" | mail -s "$subject" $admin_mail >> $mail_log  2>&1
-  exit 1
+  [ -x $ts_bin ] \
+    && echo -e "$1" | mail -s "$subject" $admin_mail 2>&1 | $ts_bin >> $mail_log \
+    || echo -e "$1" | mail -s "$subject" $admin_mail >> $mail_log  2>&1 \
+    exit 1
 }
 
 ##############
 # RUN SCRIPT #
 ##############
 
-[ -d $local_path ] || quit "'$local_path' local path not found"
-[ -x $hub_bin ]    || quit "'$hub_bin' hubic backup binary not found or not executable"
+[ -x $ts_bin ]     || quit "'$ts_bin' timestamp binary not found or not executable. please install moreutils package."
+[ -d $local_path ] || quit "'$local_path' local path not found."
+[ -x $hub_bin ]    || quit "'$hub_bin' hubic backup binary not found or not executable."
 
 rotate    $hub_log
 clean   > $hub_log
@@ -149,5 +163,5 @@ else
   subject="[`hostname`]: hubic-backup ERROR"
 fi
 
-extractLogs $hub_log | mail -s "$subject" $admin_mail >> $mail_log 2>&1
+extractLogs $hub_log | mail -s "$subject" $admin_mail 2>&1 | $ts_bin >> $mail_log
 exit $backup_return
