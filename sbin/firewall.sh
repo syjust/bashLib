@@ -1,13 +1,14 @@
 #!/bin/bash
 # ---------------------------------------------------------------------- |
-#                     This is it...MonMotha's Firewall 2.3.8!            |
+#              This is it...MonMotha's Firewall 2.3.8!                   |
 #    It's been a year I tell you, a whole damn year...but it's here      |
+# ---------------------------------------------------------------------- |
+# {{{ disclaimer
 # |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! |
 # |!*******************************************************************! |
 # |!** http://www.mplug.org/phpwiki/index.php?MonMothaReferenceGuide **! |
 # |!*******************************************************************! |
 # |!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! |
-# ---------------------------------------------------------------------- |
 #                                                                        |
 # ALL USERS, READ THE FOLLOWING:                                         |
 #                                                                        |
@@ -45,44 +46,48 @@
 # how well it works, etc.                                                |
 #                                                                        |
 # ---------------------------------------------------------------------- |
+# }}}
 
 #modprobe ip_conntrack_ftp
 
+# enable / disable FW
+ENABLE="Y"
+FORCE_ARGUMENT="start" # accept one of start, stop, status
 # Main Options
 IPTABLES="/sbin/iptables"
-TCP_ALLOW="21 22 80 443"
+TCP_ALLOW=""
 UDP_ALLOW=""
 INET_IFACE="eth0"
 LAN_IFACE=""
 INTERNAL_LAN=""
 MASQ_LAN=""
 SNAT_LAN=""
-#Blackholes will not be overridden by hostwise allows
-BLACKHOLE=""          # accept only single ip list (separated by space)
-BLACKHOLE_MAC=""      # accept only single mac list (separated by space)
-BLACKHOLE_DROP="DROP"
 DROP="TREJECT"        # policy used for DENY rules
 DENY_ALL=""           # accept host range (src_host<dest_host [...])
 DENY_HOSTWISE_TCP=""  # accept host range (src_host>port-port<dest_host [...]), common use = src_host>port
 DENY_HOSTWISE_UDP=""
-ALLOW_HOSTWISE_TCP="" # same behavior as deny_
+BLACKHOLE=""          # accept only single ip list (separated by space)
+BLACKHOLE_MAC=""      # accept only single mac list (separated by space)
+BLACKHOLE_DROP="DROP"
+#Blackholes will not be overridden by hostwise allows
+ALLOW_HOSTWISE_TCP="" # same behavior as DENY_
 ALLOW_HOSTWISE_UDP=""
 TCP_FW=""
 UDP_FW=""
 MANGLE_TOS_OPTIMIZE="FALSE"
 DHCP_SERVER="FALSE"
 BAD_ICMP="5 9 10 15 16 17 18"
-ENABLE="Y"
 
 # Flood Params
-LOG_FLOOD="100/s"
-SYN_FLOOD="200/s"
-PING_FLOOD="3/s"
+LOG_FLOOD="2/s"
+SYN_FLOOD="20/s"
+PING_FLOOD="1/s"
 
 # Outbound filters
-ALLOW_OUT_TCP=""
-PROXY=""
-MY_IP=""
+# FIXME: Update config help wiki then remove one-liner help
+ALLOW_OUT_TCP="" # Internal hosts allowed to be forwarded out on TCP (do not put this/these host/s in INTERNAL_LAN, but do define their method of access [snat, masq] if not a public ip)
+PROXY=""         # Redirect for Squid or other TRANSPARENT proxy. Syntax to specify the proxy is "host:port".
+MY_IP=""         # Set to the internal IP of this box (with the firewall), only needed for PROXY=
 
 # Below here is experimental (please report your successes/failures)
 MAC_MASQ=""         # Currently Broken
@@ -98,7 +103,7 @@ BLOCK_ODD_TCP="FALSE"
 PROTO_FW=""         # Forwarding of arbitrary IP protocols
 
 # Only touch these if you're daring (PREALPHA stuff, as in basically non-functional)
-DMZ_IFACE=""
+DMZ_IFACE="" # Interface your DMZ is on (leave blank if you don't have one) - Obsolete: Will be removed before 2.4.0
 
 
 # ----------------------------------------------------------------------|
@@ -109,13 +114,6 @@ FILTER_CHAINS="INETIN INETOUT DMZIN DMZOUT TCPACCEPT UDPACCEPT LDROP LREJECT LTR
 UL_FILTER_CHAINS="ULDROP ULREJECT ULTREJECT"
 LOOP_IFACE="lo"
 
-# Colors
-NORMAL="\033[0m"
-GREEN=$'\e[32;01m'
-YELLOW=$'\e[33;01m'
-RED=$'\e[31;01m'
-NORMAL=$'\e[0m'
-
 # Undocumented Features
 OVERRIDE_NO_FORWARD="FALSE"
 OVERRIDE_SANITY_CHECKS="FALSE"
@@ -125,30 +123,50 @@ OVERRIDE_SANITY_CHECKS="FALSE"
 # Main Script Starts                                                    |
 # ----------------------------------------------------------------------|
 
-# Let's load it!
-echo "Loading iptables firewall:"
+# {{{ output functions and variables
 
-# Configuration Sanity Checks
-echo -n "Checking configuration..."
+# Colors
+export    _esc=$"\033[0m"
+export  _black=$"\033[01;30m"
+export    _red=$"\033[01;31m"
+export  _green=$"\033[01;32m"
+export _yellow=$"\033[01;33m"
+export   _blue=$"\033[01;34m"
+export _purple=$"\033[01;35m"
+export   _cyan=$"\033[01;36m"
+export  _white=$"\033[01;37m"
+export  _white_on_red=$"\033[1;37;41m"
 
-if [ "$OVERRIDE_SANITY_CHECKS" = "TRUE" ] ; then
-  echo "skipped! If it breaks, don't complain!"
-  echo "If there's a reason you needed to do this, please report to the developers list!"
-  echo
-  echo -n "Wait 5 seconds..."
-  sleep 5
-  echo "continuing"
-  echo
-  echo
-else
-  # Has it been configured?
-  if ! [ "$ENABLE" = "Y" ] ; then
+colorize() {
     echo
-    echo "${RED}You need to *EDIT YOUR CONFIGURATION* and set ENABLE to Y!"
-    echo "${YELLOW}End User Liscense Agreement:${NORMAL}"
-    echo -n "$GREEN"
-    cat << EOF
-
+    echo -e "${!1}" "$2"
+}
+export -f colorize
+quit() {
+    error "$1"
+    [ -z "$2" ] \
+        && exit 1 \
+        || exit $2
+}
+export -f quit
+error() {
+    colorize _white_on_red "ERROR : $1"
+}
+export -f error
+success() {
+    colorize _white "SUCCESS : $1"
+}
+export -f success
+info() {
+    colorize _cyan "INFO : $1"
+}
+export -f info
+warn() {
+    colorize _yellow "WARN : $1"
+}
+export -f warn
+disclaimer() {
+cat << EOF
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -174,35 +192,48 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
 IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
-
 EOF
-    echo "${RED}You need to *EDIT YOUR CONFIGURATION* and set ENABLE to Y!${NORMAL}"
-    exit 99
+}
+export -f disclaimer
+# }}}
+
+# {{{ Configuration Sanity Checks
+info "Checking configuration..."
+
+if [ "$OVERRIDE_SANITY_CHECKS" = "TRUE" ] ; then
+  echo "skipped! If it breaks, don't complain!"
+  echo "If there's a reason you needed to do this, please report to the developers list!"
+  echo
+  echo -n "Wait 5 seconds..."
+  sleep 5
+  echo "continuing"
+  echo
+  echo
+else
+  # Has it been configured?
+  if ! [ "$ENABLE" = "Y" ] ; then
+    error "You need to *EDIT YOUR CONFIGURATION* and set ENABLE to Y!"
+    warn  "End User Liscense Agreement:"
+    disclaimer
+    quit "You need to *EDIT YOUR CONFIGURATION* and set ENABLE to Y!" 99
   fi
 
   # It's hard to run an iptables script without iptables...
   if ! [ -x $IPTABLES ] ; then
-    echo
-    echo "ERROR IN CONFIGURATION: ${IPTABLES} doesn't exist or isn't executable!"
-    exit 4
+    quit "ERROR IN CONFIGURATION: ${IPTABLES} doesn't exist or isn't executable!" 4
   fi
 
   # Basic interface sanity
   for dev in ${LAN_IFACE} ; do
     if [ "$dev" = "${DMZ_IFACE}" ] && [ "$dev" != "" ]; then
-      echo
-      echo "ERROR IN CONFIGURATION: DMZ_IFACE and LAN_IFACE can't have a duplicate interface!"
-      exit 1
+      quit "ERROR IN CONFIGURATION: DMZ_IFACE and LAN_IFACE can't have a duplicate interface!" 1
     fi
   done
 
   # Create a test chain to work with for system ablilities testing
   ${IPTABLES} -N SYSTEST
   if [ "$?" != "0" ] ; then
-    echo
-    echo "IPTABLES can't create new chains or the script was interrupted previously!"
-    echo "Flush IPTABLES rulesets and chains and try again."
-    exit 4
+    quit "IPTABLES can't create new chains or the script was interrupted previously!\nFlush IPTABLES rulesets and chains and try again." 4
   fi
 
   # Check for ULOG support
@@ -216,60 +247,43 @@ EOF
   # Check for LOG support
   ${IPTABLES} -A SYSTEST -j LOG > /dev/null 2>&1
   if [ "$?" != "0" ] ; then
-    echo
-    echo "Your kernel lacks LOG support required by this script. Aborting."
-    exit 3
+    quit "Your kernel lacks LOG support required by this script. Aborting." 3
   fi
 
   # Check for stateful matching
   ${IPTABLES} -A SYSTEST -m state --state ESTABLISHED -j ACCEPT > /dev/null 2>&1
   if [ "$?" != "0" ] ; then
-    echo
-    echo "Your kernel lacks stateful matching, this would break this script. Aborting."
-    exit 3
+    quit "Your kernel lacks stateful matching, this would break this script. Aborting." 3
   fi
 
   # Check for the limit match
   ${IPTABLES} -A SYSTEST -m limit -j ACCEPT > /dev/null 2>&1
   if [ "$?" != "0" ] ; then
-    echo
-    echo "Support not found for limiting needed by this script. Aborting."
-    exit 3
+    quit "Support not found for limiting needed by this script. Aborting." 3
   fi
 
   # Check for REJECT
   ${IPTABLES} -A SYSTEST -j REJECT > /dev/null 2>&1
   if [ "$?" != "0" ] ; then
-    echo
-    echo "Support not found for the REJECT target needed by this script. Aborting."
-    exit 3
+    quit "Support not found for the REJECT target needed by this script. Aborting." 3
   fi
 
   # Check DROP sanity
   if [ "$DROP" = "" ] ; then
-    echo
-    echo "There needs to be a DROP policy (try TREJECT)!"
-    exit 1
+    quit "There needs to be a DROP policy (try TREJECT)!" 1
   fi
   if [ "$DROP" = "ACCEPT" ] ; then
-    echo
-    echo "The DROP policy is set to ACCEPT; there is no point in loading the firewall as there wouldn't be one."
-    exit 2
+    quit "The DROP policy is set to ACCEPT; there is no point in loading the firewall as there wouldn't be one." 2
   fi
   if [ "$DROP" = "ULDROP" ] || [ "$DROP" = "ULREJECT" ] || [ "$DROP" = "ULTREJECT" ] ; then
     if [ "$HAVE_ULOG" != "true" ] ; then
-      echo
-      echo "You have selected a ULOG policy, but your system lacks ULOG support."
-      echo "Please choose a policy that your system has support for."
-      exit 5
+      quit "You have selected a ULOG policy, but your system lacks ULOG support.\nPlease choose a policy that your system has support for." 5
     fi
   fi
 
   # Problems with blackholes?
   if [ "$BLACKHOLE" != "" ] && [ "$BLACKHOLE_DROP" = "" ] ; then
-    echo
-    echo "You can't use blackholes and not have a policy for them!"
-    exit 1
+    quit "You can't use blackholes and not have a policy for them!" 1
   fi
 
   # Flush and remove the chain SYSTEST
@@ -277,12 +291,19 @@ EOF
   ${IPTABLES} -X SYSTEST
 
   # Seems ok...
-  echo "passed"
+  success "check passed"
 fi #from override option
+# }}}
+
+# {{{ start firewall
+start_fw() {
 
 # ===============================================
 # ----------------Preprocessing------------------
 # ===============================================
+
+# Let's load it!
+info "Loading iptables firewall:"
 
 # Turn TCP_ALLOW and UDP_ALLOW into ALLOW_HOSTWISE
 echo -n "Performing TCP_ALLOW and UDP_ALLOW alias preprocessing..."
@@ -311,7 +332,7 @@ if [ "$INTERNAL_LAN" != "" ] && [ "$OVERRIDE_NO_FORWARD" != "TRUE" ] ; then
     echo 1 > /proc/sys/net/ipv4/ip_forward
     echo "enabled."
   else
-    echo "support not found! This will cause problems if you need to do any routing."
+    warn "support not found! This will cause problems if you need to do any routing."
   fi
 fi
 
@@ -326,7 +347,7 @@ if [ -e /proc/sys/net/ipv4/tcp_syncookies ] ; then
     echo "disabled."
   fi
 else
-  echo "support not found, but that's OK."
+  warn "support not found, but that's OK."
 fi
 
 # Enable Route Verification to prevent martians and other such crud that
@@ -343,7 +364,7 @@ if [ "$INET_IFACE" != "" ] ; then
         echo -n "disabled:$dev "
       fi
     else
-      echo "not found:$dev "
+      warn "not found:$dev "
     fi
   done
 fi
@@ -359,7 +380,7 @@ if [ "$LAN_IFACE" != "" ] ; then
         echo -n "disabled:$dev "
       fi
     else
-      echo "not found:$dev "
+      warn "not found:$dev "
     fi
   done
 fi
@@ -374,7 +395,7 @@ if [ "$DMZ_IFACE" != "" ] ; then
       echo -n "disabled:${DMZ_IFACE} "
     fi
   else
-    echo "not found:${DMZ_IFACE} "
+    warn "not found:${DMZ_IFACE} "
   fi
 fi
 echo
@@ -392,7 +413,7 @@ if [ "$INET_IFACE" != "" ] ; then
         echo -n "activated:$dev "
       fi
     else
-      echo "not found:$dev "
+      warn "not found:$dev "
     fi
   done
 fi
@@ -408,7 +429,7 @@ if [ "$LAN_IFACE" != "" ] ; then
         echo -n "activated:$dev "
       fi
     else
-      echo "not found:$dev "
+      warn "not found:$dev "
     fi
   done
 fi
@@ -423,7 +444,7 @@ if [ "$DMZ_IFACE" != "" ] ; then
       echo -n "activated:${DMZ_IFACE} "
     fi
   else
-    echo "not found:${DMZ_IFACE} "
+    warn "not found:${DMZ_IFACE} "
   fi
 fi
 echo
@@ -715,11 +736,9 @@ if [ "$BLOCK_ODD_TCP" == "TRUE" ] ; then
 fi
 
 
-# Packets which can't be classified statefully are probably attempts to
-# circumvent the firewall.  There's no need to send back an error
-# or anything of the like.
-echo -n "DROPping invalid packets..."
-${IPTABLES} -t filter -A INETIN -m state --state INVALID -j DROP
+#Invalid packets are always annoying
+echo -n "${DROP}ing invalid packets..."
+${IPTABLES} -t filter -A INETIN -m state --state INVALID -j ${DROP}
 echo "done"
 
 
@@ -1119,3 +1138,40 @@ echo
 
 # All done!
 echo "Done loading the firewall!"
+}
+# }}}
+
+# {{{ stop firewall
+stop_fw() {
+    echo "Stopping iptables firewall:"
+    # Create new chains
+    # Output to /dev/null in case they don't exist from a previous invocation
+    echo -n "Dropping chains: "
+    for chain in ${FILTER_CHAINS} ; do
+      ${IPTABLES} -t filter -F ${chain} > /dev/null 2>&1
+      ${IPTABLES} -t filter -X ${chain} > /dev/null 2>&1
+      echo -n "${chain} "
+    done
+    if [ ${HAVE_ULOG} = "true" ] || [ ${HAVE_ULOG} = "" ] ; then
+      for chain in ${UL_FILTER_CHAINS} ; do
+        ${IPTABLES} -t filter -F ${chain} > /dev/null 2>&1
+        ${IPTABLES} -t filter -X ${chain} > /dev/null 2>&1
+        echo -n "${chain} "
+      done
+    fi
+    echo
+    echo "Done stopping the firewall!"
+}
+# }}}
+
+# {{{
+status_fw() {
+    ${IPTABLES} -L
+}
+# }}}
+
+[ -z "$1" ] && ACTION="$FORCE_ARGUMENT" || ACTION="$1"
+case $ACTION in
+    start|stop|status) ${ACTION}_fw ;;
+    *) quit "'$ACTION' bad action (please use one of start, stop, status)" ;;
+esac
