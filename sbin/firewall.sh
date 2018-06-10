@@ -137,11 +137,12 @@ export   _cyan=$"\033[01;36m"
 export  _white=$"\033[01;37m"
 export  _white_on_red=$"\033[1;37;41m"
 
-colorize() {
-    echo
-    echo -e "${!1}" "$2"
+colorfunc() {
+    echo -e  "${!1}"
+    echo -ne "${FUNCNAME[1]} : " | tr [[:lower:]] [[:upper:]]
+    echo -e  "${!1}${2}${_esc}"
 }
-export -f colorize
+export -f colorfunc
 quit() {
     error "$1"
     [ -z "$2" ] \
@@ -150,19 +151,19 @@ quit() {
 }
 export -f quit
 error() {
-    colorize _white_on_red "ERROR : $1"
+    colorfunc _white_on_red "$1"
 }
 export -f error
 success() {
-    colorize _white "SUCCESS : $1"
+    colorfunc _white "$1"
 }
 export -f success
 info() {
-    colorize _cyan "INFO : $1"
+    colorfunc _cyan "$1"
 }
 export -f info
 warn() {
-    colorize _yellow "WARN : $1"
+    colorfunc _yellow "$1"
 }
 export -f warn
 disclaimer() {
