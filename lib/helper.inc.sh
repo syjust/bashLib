@@ -22,7 +22,7 @@
 #
 
 [ -z "$BASH_LIB" ] && echo "bashLib path not found" && exit 1
-source $BASH_LIB/lib/color.sh
+source $BASH_LIB/lib/color-minproc.sh
 
 #############
 # FUNCTIONS #
@@ -86,28 +86,28 @@ logn() {
 # log green
 #
 succ() {
-    log "${BGREEN_COLOR}$@"
+    log "`bgreen $@`"
 }
 
 #
 # log cyan
 #
 info() {
-    log "${BCYAN_COLOR}$@"
+    log "`bcyan $@`"
 }
 
 #
 # log yellow
 #
 warn() {
-    log "${BYELLOW_COLOR}$@"
+    log "`byellow $@`"
 }
 
 #
 # log red
 #
 err() {
-    log "${BRED_COLOR}$@"
+    log "`bred $@`"
 }
 
 #
