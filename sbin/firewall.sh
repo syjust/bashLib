@@ -79,9 +79,9 @@ DHCP_SERVER="FALSE"
 BAD_ICMP="5 9 10 15 16 17 18"
 
 # Flood Params
-LOG_FLOOD="2/s"
-SYN_FLOOD="20/s"
-PING_FLOOD="1/s"
+LOG_FLOOD="200/s"
+SYN_FLOOD="250/s"
+PING_FLOOD="3/s"
 
 # Outbound filters
 # FIXME: Update config help wiki then remove one-liner help
