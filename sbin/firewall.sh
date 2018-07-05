@@ -105,7 +105,6 @@ PROTO_FW=""         # Forwarding of arbitrary IP protocols
 # Only touch these if you're daring (PREALPHA stuff, as in basically non-functional)
 DMZ_IFACE="" # Interface your DMZ is on (leave blank if you don't have one) - Obsolete: Will be removed before 2.4.0
 
-
 # ----------------------------------------------------------------------|
 # These control basic script behavior; there should be no need to       |
 # change any of these settings for normal use.                          |
@@ -659,7 +658,6 @@ if [ "$BLACKHOLE_MAC" != "" ] ; then
   done
   echo
 fi
-/sbin/iptables -A INPUT -m mac --mac-source 00:0F:EA:91:04:08 -j DROP
 
 if [ "$DENY_HOSTWISE_TCP" != "" ] ; then
   echo -n "Hostwise TCP Denies: "
@@ -1145,6 +1143,18 @@ echo "Done loading the firewall!"
 # {{{ stop firewall
 stop_fw() {
     echo "Stopping iptables firewall:"
+
+    # Default Policies
+    # INPUT policy is drop as of 2.3.7-pre5
+    # Policy can't be reject because of kernel limitations
+    echo -n "Default Policies: "
+    ${IPTABLES} -t filter -P INPUT ACCEPT
+    echo -n "INPUT:ACCEPT "
+    ${IPTABLES} -t filter -P OUTPUT ACCEPT
+    echo -n "OUTPUT:ACCEPT "
+    ${IPTABLES} -t filter -P FORWARD ACCEPT
+    echo -n "FORWARD:ACCEPT "
+    echo
     # Create new chains
     # Output to /dev/null in case they don't exist from a previous invocation
     echo -n "Dropping chains: "
@@ -1160,6 +1170,23 @@ stop_fw() {
         echo -n "${chain} "
       done
     fi
+    echo -n "Flush: "
+    ${IPTABLES} -t filter -F INPUT
+    echo -n "INPUT "
+    ${IPTABLES} -t filter -F OUTPUT
+    echo -n "OUTPUT1 "
+    ${IPTABLES} -t filter -F FORWARD
+    echo -n "FORWARD "
+    ${IPTABLES} -t nat -F PREROUTING
+    echo -n "PREROUTING1 "
+    ${IPTABLES} -t nat -F OUTPUT
+    echo -n "OUTPUT2 "
+    ${IPTABLES} -t nat -F POSTROUTING
+    echo -n "POSTROUTING "
+    ${IPTABLES} -t mangle -F PREROUTING
+    echo -n "PREROUTING2 "
+    ${IPTABLES} -t mangle -F OUTPUT
+    echo -n "OUTPUT3"
     echo
     echo "Done stopping the firewall!"
 }
@@ -1167,7 +1194,7 @@ stop_fw() {
 
 # {{{
 status_fw() {
-    ${IPTABLES} -L
+    ${IPTABLES} -L -n
 }
 # }}}
 
