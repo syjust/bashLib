@@ -1026,13 +1026,13 @@ if [ "$ALLOW_HOSTWISE_TCP" != "" ] ; then
               ${IPTABLES} -t filter -A INETIN -p tcp -s ${lhost} --dport ${port} -j TCPACCEPT
             fi
           else
-                                                if [ "$lsp" != "" ] ; then
-                                                        ${IPTABLES} -t filter -A INETIN -p tcp -s ${lhost} -d ${dhost} --dport ${fsp}:${lsp} -j TCPACCEPT
-                                                else
-                                                        ${IPTABLES} -t filter -A INETIN -p tcp -s ${lhost} -d ${dhost} --dport ${port} -j TCPACCEPT
-                                                fi
+            if [ "$lsp" != "" ] ; then
+              ${IPTABLES} -t filter -A INETIN -p tcp -s ${lhost} -d ${dhost} --dport ${fsp}:${lsp} -j TCPACCEPT
+            else
+              ${IPTABLES} -t filter -A INETIN -p tcp -s ${lhost} -d ${dhost} --dport ${port} -j TCPACCEPT
+            fi
           fi
-                            echo -n "${rule} "
+          echo -n "${rule} "
         }
     }
   done
@@ -1155,6 +1155,30 @@ stop_fw() {
     ${IPTABLES} -t filter -P FORWARD ACCEPT
     echo -n "FORWARD:ACCEPT "
     echo
+
+    # Flush everything
+    # If you need compatability, you can comment some or all of these out,
+    # but remember, if you re-run it, it'll just add the new rules in, it
+    # won't remove the old ones for you then, this is how it removes them.
+    echo -n "Flush: "
+    ${IPTABLES} -t filter -F INPUT
+    echo -n "INPUT "
+    ${IPTABLES} -t filter -F OUTPUT
+    echo -n "OUTPUT1 "
+    ${IPTABLES} -t filter -F FORWARD
+    echo -n "FORWARD "
+    ${IPTABLES} -t nat -F PREROUTING
+    echo -n "PREROUTING1 "
+    ${IPTABLES} -t nat -F OUTPUT
+    echo -n "OUTPUT2 "
+    ${IPTABLES} -t nat -F POSTROUTING
+    echo -n "POSTROUTING "
+    ${IPTABLES} -t mangle -F PREROUTING
+    echo -n "PREROUTING2 "
+    ${IPTABLES} -t mangle -F OUTPUT
+    echo -n "OUTPUT3"
+    echo
+
     # Create new chains
     # Output to /dev/null in case they don't exist from a previous invocation
     echo -n "Dropping chains: "
