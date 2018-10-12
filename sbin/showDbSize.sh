@@ -21,7 +21,7 @@ while [ ! -z "$1" ] ; do
     -tr|-rt) orderBy="-r -k 1 -d -t:"   ;; # table name reverse
     -t)      orderBy="-k 1 -d -t:"      ;; # table name
     -u)      U=$2 ; shift               ;;  
-    -p)      P=$2 ; shift               ;;  
+    -p*)     P=${1/-p}                  ;;
     -h)      H=$2 ; shift               ;;  
     -D)      DATABASES="$DATABASES $2"
              shift                      ;;  
@@ -30,7 +30,7 @@ while [ ! -z "$1" ] ; do
   shift
 done
 
-[ -z "$U" -o -z "$P" -o -z "$H" ] && quit "set -u, -p, -h & -D please !"
+[ -z "$U" -o -z "$P" -o -z "$H" ] && quit "set -u, -p, -h & -D please (like with standard mysql cmd) !"
 
 
 
