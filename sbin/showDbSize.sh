@@ -23,14 +23,14 @@ while [ ! -z "$1" ] ; do
     -u)      U=$2 ; shift               ;;  
     -p)      P=$2 ; shift               ;;  
     -h)      H=$2 ; shift               ;;  
-    -d)      DATABASES="$DATABASES $2"
+    -D)      DATABASES="$DATABASES $2"
              shift                      ;;  
     *)       quit "'$1' is not allowed" ;;
   esac
   shift
 done
 
-[ -z "$U" -o -z "$P" -o -z "$H" ] && quit "set -u, -p, -h & -d please !"
+[ -z "$U" -o -z "$P" -o -z "$H" ] && quit "set -u, -p, -h & -D please !"
 
 
 
@@ -45,7 +45,7 @@ done
 
 for database in $DATABASES ; do
   if [ ! -e "${database}.lst" ] ; then
-    mysql -u $U -p$P -h $H $database -e "SHOW TABLES;" | grep -vE "^Tables_in_$database" > ${database}.lst 2>/dev/null \
+    mysql -u $U -p$P -h $H -D $database -e "SHOW TABLES;" | grep -vE "^Tables_in_$database" > ${database}.lst 2>/dev/null \
      || quit "show tables in $database failed"
   fi  
  
@@ -54,7 +54,7 @@ for database in $DATABASES ; do
   echo $database
   echo $BAR
   for table in $TABLES ; do
-    mysql -u $U -p$P -h $H $database -e "SELECT count(*) AS '$table' FROM $table;" 2>/dev/null \
+    mysql -u $U -p$P -h $H -D $database -e "SELECT count(*) AS '$table' FROM $table;" 2>/dev/null \
       | xargs printf "%-${c}s : %'${n}.f\n" \
     || quit "mysql $database $table error"
   done | sort $orderBy
