@@ -1,6 +1,7 @@
 #!/bin/bash
 # make hubic backup and send email notifications with error or success
-#{{{
+
+# {{{ hubic-backup usage from frachop github user
 # download hubic-backup from github
 # https://github.com/frachop/hubic-backup
 #Usage: hubic-backup [OPTIONS]
@@ -29,71 +30,86 @@
 #  -d [ --del-non-existing ]          allow deleting non existing backup files
 #}}}
 
+# {{{ CONSTANTS DECLARATIONS
+
 # Mail & Output options
 # =====================
 # please : write logrotate rules for this files
-admin_mail="XXX@XX.XX"
-hub_log_dir="/var/log/hubic"
-hub_log="$hub_log_dir/backup.log"
-mail_log="$hub_log_dir/backup-mail.log"
-ts_bin="/usr/bin/ts"
-[ ! -d $hub_log_dir ] && mkdir -p $hub_log_dir
+ADMIN_MAIL="XXX@XX.XX"
+HUB_LOG_DIR="/var/log/hubic"
+HUB_LOG="$HUB_LOG_DIR/backup.log"
+MAIL_LOG="$HUB_LOG_DIR/backup-mail.log"
+TS_BIN="/usr/bin/ts"
+SUBJECT="[`hostname`]: hubic-backup ERROR"
+[ ! -d $HUB_LOG_DIR ] && mkdir -p $HUB_LOG_DIR
 
 # HUBIC options
 # =============
-hub_bin="/usr/local/bin/hubic-backup"
-hub_user="XXX@XX.XX"
-hub_pass="HUBIC_PASSWORD"
-local_path="/var/lib/vz/vzdump/dump/"
-remote_path="HUBIC_REMOTE_NAMED_PATH"
-#hub_level="notice" # empty message :(
-hub_level="info" # WARNING : verbose !!!
-bar="####################################################################################"
+HUB_BIN="/usr/local/bin/hubic-backup"
+HUB_USER="XXX@XX.XX"
+HUB_PASS="HUBIC_PASSWORD"
+LOCAL_PATH="/var/lib/vz/vzdump/dump/"
+REMOTE_PATH="HUBIC_REMOTE_NAMED_PATH"
+#HUB_LEVEL="notice" # empty message :(
+HUB_LEVEL="info" # WARNING : verbose !!!
+BAR="####################################################################################"
 
+# Archive Cleanup
+# ===============
+RETENTION_DAYS="180"
+ARCHIVE_REGEX="FIND_CONTAINER_FILE_NAME_REGEX"
 
+# }}}
+
+# {{{ function title
 #
 # write title on stdout
 #
 function title() {
-  echo $bar
-  printf "# %-80s #\n" "$1"
-  echo $bar
+  echo $BAR
+  printf "# <b>%-80s</b> #\n" "$1"
+  echo $BAR
 }
-
-#
-# Backup function
+#}}}
+# {{{ function backup
 #
 function backup() {
-  title "sync local backup with hubic"
-  $hub_bin \
-    --loglevel $hub_level \
+  title "Syncing local backup with hubic"
+  $HUB_BIN \
+    --loglevel $HUB_LEVEL \
     --excludes <(echo "*log") \
-    --login $hub_user \
-    --pwd $hub_pass \
-    --src $local_path \
+    --login $HUB_USER \
+    --pwd $HUB_PASS \
+    --src $LOCAL_PATH \
     --del-non-existing \
-    --dst $remote_path
+    --fingerprint-md5 \
+    --dst $REMOTE_PATH
 }
-
+#}}}
+# {{{ function clean
 #
 # remove old archives
 #
 clean() {
-  title "remove old archives"
+  title "Removing old archives"
   local _now=`date +%s`
-  local _90=$(($_now-(90*3600*24)))
-  local _90_fmt=`date -d @$_90 +%Y%m%d%H%M.%S`
-  touch -t $_90_fmt /tmp/timer
-  find $local_path ! -newer /tmp/timer -exec rm -v {} \;
+  local _days_ago=$(($_now-($RETENTION_DAYS*3600*24)))
+  local _days_ago_fmt=`date -d @$_days_ago +%Y%m%d%H%M.%S`
+  touch -t $_days_ago_fmt /tmp/timer
+  find $LOCAL_PATH ! -newer /tmp/timer -name "$ARCHIVE_REGEX" -type f -exec rm -v {} \; \
+    | grep "." \
+    || echo "<span style='color:orange;'><b>There is no archive to remove !</b></span>"
 }
-
+#}}}
+# {{{ function is_num
+#
 is_num() {
   local arg="$1"
   [ ! -z "$arg" ] && [ $arg -eq $arg ] 2>/dev/null
 }
-
+#}}}
+# {{{ function extractLogs
 #
-# extractLogs
 # extract only useful informations from hubi logs & format it as html
 #
 extractLogs() {
@@ -118,7 +134,8 @@ extractLogs() {
     echo "<span color='red'>'$file': file not found !!!</span>"
   fi
 }
-
+#}}}
+# {{{ function rotate
 #
 # rotate logs (gziped with date extension)
 # if file exists & is not empty
@@ -134,34 +151,39 @@ rotate() {
     fi
   fi
 }
-
+#}}}
+# {{{ function quit
 #
 # quit with error status and send error email
 #
 quit() {
-  [ -x $ts_bin ] \
-    && echo -e "$1" | mail -s "$subject" $admin_mail 2>&1 | $ts_bin >> $mail_log \
-    || echo -e "$1" | mail -s "$subject" $admin_mail >> $mail_log  2>&1 \
-    exit 1
+  local mess="$1"
+  [ -x $TS_BIN ] \
+    && echo -e "<span style='color:red;'><b>$mess</b></span>" \
+      | mail -a"Content-Type: text/html" -s "$SUBJECT" $ADMIN_MAIL 2>&1 | $TS_BIN >> $MAIL_LOG \
+    || echo -e "<span style='color:red;'><b>$mess</b></span>" \
+      | mail -a"Content-Type: text/html" -s "$SUBJECT" $ADMIN_MAIL >> $MAIL_LOG  2>&1
+  exit 1
 }
+#}}}
 
 ##############
 # RUN SCRIPT #
 ##############
 
-[ -x $ts_bin ]     || quit "'$ts_bin' timestamp binary not found or not executable. please install moreutils package."
-[ -d $local_path ] || quit "'$local_path' local path not found."
-[ -x $hub_bin ]    || quit "'$hub_bin' hubic backup binary not found or not executable."
+# {{{ bin & path tests
+[ -x $TS_BIN ]     || quit "'$TS_BIN' timestamp binary not found or not executable. please install moreutils package."
+[ -d $LOCAL_PATH ] || quit "'$LOCAL_PATH' local path not found."
+[ -x $HUB_BIN ]    || quit "'$HUB_BIN' hubic backup binary not found or not executable."
+# }}}
 
-rotate    $hub_log
-clean   > $hub_log
-backup >> $hub_log 2>&1
+rotate    $HUB_LOG
+clean   > $HUB_LOG
+backup >> $HUB_LOG 2>&1
 backup_return=$?
 if [ $backup_return -eq 0 ] ; then
-  subject="[`hostname`]: hubic-backup SUCCESS"
-else
-  subject="[`hostname`]: hubic-backup ERROR"
+  SUBJECT="[`hostname`]: hubic-backup SUCCESS"
 fi
 
-extractLogs $hub_log | mail -s "$subject" $admin_mail 2>&1 | $ts_bin >> $mail_log
+extractLogs $HUB_LOG | mail -a"Content-Type: text/html" -s "$SUBJECT" $ADMIN_MAIL 2>&1 | $TS_BIN >> $MAIL_LOG
 exit $backup_return
