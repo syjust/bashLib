@@ -1,5 +1,10 @@
 #!/bin/bash
+# @author sy.just@gmail.com
+# @src https://pastebin.com/wJ5YL5K1
+# @see https://forum.ovh.com/showthread.php/42966-T%C3%A9l%C3%A9charger-tous-les-logs-rapidement
+
 [[ -e last_error ]] && rm last_error
+
 OVH_LOGS_URL="logs.cluster002.hosting.ovh.net"
 ALL_DAYS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31"
 ALL_MONTHES="01 02 03 04 05 06 07 08 09 10 11 12"
