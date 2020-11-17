@@ -1,5 +1,4 @@
 #!/bin/bash
-#OVH_LOGS_URL="logs.ovh.net"
 [[ -e last_error ]] && rm last_error
 OVH_LOGS_URL="logs.cluster002.hosting.ovh.net"
 ALL_DAYS="01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31"
@@ -11,11 +10,12 @@ function usage() {
     echo "usage: $0 domain.tld [cookie_file_name] [year(s)] [month(s)] [day(s)]"
     echo
     echo "default cookie_file_name is cookie.txt"
-    echo "default year is $THIS_YEAR"
+    echo "default year is current ('$THIS_YEAR')"
     echo "default monthes ar all monthes in a year"
     echo "default days ar all days in all monthes"
     echo
-    echo "assume to load a valid cookie from ovh"
+    echo "assume to load a valid cookies from ovh log site ($OVH_LOG_URL)"
+    echo "this cookie file MUST include at least the cookie named 'token'"
     echo
     exit
 }
@@ -39,7 +39,7 @@ DAYS="${5:-${ALL_DAYS}}"
 [[ ! -e "$COOKIE" ]] && quit "'$COOKIE' : cookie_file NOT FOUND"
 
 echo
-echo "# $DOMAIN $USER $PASS => GO";
+echo "# $DOMAIN $COOKIE => GO";
 
 function getLog() {
     local year="${1}"
