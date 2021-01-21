@@ -4,7 +4,7 @@
 #   C O N F I G   &   C O N S T A N T S   #
 ###########################################
 
-CONFIG="~/.toggl/config"
+CONFIG="$HOME/.toggl/config"
 TOGGL_API_URL="https://www.toggl.com/api/v8"
 TOGGL_TIME_ENTRIES_URL="$TOGGL_API_URL/time_entries"
 
@@ -38,6 +38,19 @@ usage() {
 export -f usage
 # }}}
 
+# {{{ function backtrace
+#
+backtrace() {
+    local func_id cnt=${1:-1}
+    echo "BACKTRACE : "
+    for func_id in ${!FUNCNAME[@]} ; do
+        [ $func_id -ge $cnt ] \
+            && echo "$func_id:${FUNCNAME[$func_id]}"
+    done
+}
+export -f backtrace
+# }}}
+
 # {{{ function quit
 #
 quit() {
@@ -51,19 +64,6 @@ export -f quit
 # }}}
 
 [[ -r $CONFIG ]] && source $CONFIG || quit "'$CONFIG' file not found or not readable"
-
-# {{{ function backtrace
-#
-backtrace() {
-    local func_id cnt=${1:-1}
-    echo "BACKTRACE : "
-    for func_id in ${!FUNCNAME[@]} ; do
-        [ $func_id -ge $cnt ] \
-            && echo "$func_id:${FUNCNAME[$func_id]}"
-    done
-}
-export -f backtrace
-# }}}
 
 # {{{ function curl_get
 #
@@ -112,10 +112,9 @@ export -f extract_ids_from_json
 # {{{ function time_entry_quit
 #
 time_entry_quit() {
-    echo
-    echo -e "ERROR : $1"
     time_entry_usage
-    exit 1
+    echo
+    quit "$@"
 }
 export -f time_entry_quit
 # }}}
