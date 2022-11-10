@@ -5,7 +5,7 @@
 # * output
 #   - log
 #   - info
-#   - success
+#   - succ
 #   - warn
 #   - err
 #   - debug
