@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # This lib provides default options for write scripts with options and arguments
-# default functions provided are :
+# default functions provided are:
 # * output
 #   - log
 #   - info
@@ -34,7 +34,7 @@ source $BASH_LIB/lib/color-minproc.sh
 # @return $2 (or 0)
 #
 log() {
-    echo -e "`date "+%Y-%M-%D %H:%M:%S"` : $@"
+    echo -e "`date "+%Y-%M-%D %H:%M:%S"`: $@"
     tput sgr0
 }
 
@@ -44,7 +44,7 @@ log() {
 debug() {
     local debug=${DEBUG:-0}
     if [ $debug -ne 0 ] ; then
-        warn "DEBUG : $@"
+        warn "DEBUG: $@"
     fi
 }
 
@@ -115,7 +115,7 @@ err() {
 #
 quit() {
     echo
-    err "ERROR : $@"
+    err "ERROR: $@"
     usage
     echo
     exit 1
@@ -137,7 +137,7 @@ options() {
         local tail="$((${end}-${start}))"
         [ $tail -lt 1 ] && quit "function 'options' suppose ## OPTIONS must be declared before ## END OPTIONS"
         log
-        warn "WHERE OPTIONS are :"
+        warn "WHERE OPTIONS are:"
         head -n$head $0 | tail -n$tail \
             | sed 's/^[[:blank:]]\{1,\}\([^)]*\))\([[:blank:]]\{1,\}\)[^#]*#/    \1)\2/' \
             | grep -E "^[[:blank:]]*-" \
@@ -150,7 +150,7 @@ options() {
 #
 usage() {
     log
-    info "USAGE : $0 [OPTIONS]"
+    info "USAGE: $0 [OPTIONS]"
     options
 }
 

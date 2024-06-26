@@ -1,6 +1,9 @@
 #!/bin/bash
 RED=$(tput setaf 1)
 GREEN=$(tput setaf 2)
+CYAN=$(tput setaf 6)
+BLUE=$(tput setaf 4)
+YELLOW=$(tput setaf 3)
 NORMAL=$(tput sgr0)
 
 time=1
@@ -8,17 +11,17 @@ quit() {
     echo -e "$@"
     exit 1
 }
-while [ ! -z $1 ] ; do
+while [ ! -z "$1" ] ; do
     case $1 in
         -t|-n) time=$2 ; shift ;;
+        -t*|-n*) time=${1:2} ;;
+        --color) ;; #JUST HANDLE THE watch --color option
         --) shift ; break ;;
         *) break ;;
     esac
     shift
 done
 while true ; do
-    clear
-    printf '%s%*s%s\n' "$RED" "80" "`date`" "$NORMAL"
-    eval "$@"
+    printf '%s%s%s%80s%s\n\n%s\n' "$CYAN" "$@" "$RED" "`clear;date`" "$NORMAL" "$(exec $@)"
     sleep $time
 done

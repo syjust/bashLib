@@ -36,8 +36,10 @@ current_screen_color=$"${BCYAN_RED_COLOR}"
 current_session_color=$"${BCYAN_BLACK_COLOR}"
 sed_grep_color=$"${BRED_WHITE_COLOR}"
 
+OS="`uname -s`"
+
 if [ ! -z "$1" ] ; then
-  what="`echo "${1//#/.}" | sed 's/\([()|]\)/\\\\\1/g'`"
+  what="`echo "${1//\#/.}" | sed 's/\([()|]\)/\\\\\1/g'`"
   sed_grep=$'s#\('${what}'\)#'${sed_grep_color}'\1'$RESET_COLOR'#g;'
 else
   sed_grep=""
@@ -50,11 +52,19 @@ for t in $ttys ; do
     IFS=$'_/(:)' read name p pts pid e host sess
     if [ ! -z $pid ] ; then
 
-      ppid="`ps --no-headers -o "ppid" -p $pid`"
+      if [ "x$OS" == "xDarwin" ] ; then
+          ppid="`ps -o "ppid" -p $pid | grep -v PPID`"
+      else
+          ppid="`ps --no-headers -o "ppid" -p $pid`"
+      fi
       [ -z "$ppid" ] && ppid=$pid
 
       screen="`echo "$screens" | grep $ppid`"
-      commands="'$(echo `ps --no-headers -o command -t $pts | sed 's#/bin/bash##g;s/$/ |/g;s/ /_/g;s/^\(_|\|| \|_\)//;s/_|$//g;'`)'"
+      if [ "x$OS" == "xDarwin" ] ; then
+          commands="'$(echo `ps -o command -t $pts | grep -v COMMAND | sed 's#/bin/bash##g;s/$/ |/g;s/ /_/g;s/^\(_|\|| \|_\)//;s/_|$//g;'`)'"
+      else
+          commands="'$(echo `ps --no-headers -o command -t $pts | sed 's#/bin/bash##g;s/$/ |/g;s/ /_/g;s/^\(_|\|| \|_\)//;s/_|$//g;'`)'"
+      fi
       if [ -z "$screen" ] ; then
         screen="SCREEN#00"
         printf "$tmp_format" "$name" "XXX" "pts/$pts" "$screen"  "$pid" "$commands" "$t"
@@ -73,8 +83,8 @@ done \
   | sed 's/#/ /g' \
   | xargs printf "$end_format" \
   | sed $sed_grep'/'${current_tty//\//\\\/}'/{s#^#'${current_session_color}'#;s#'${RESET_COLOR//\[/\\\[}'#'${current_session_color}'#g;};' \
-  | sed 's#^\([^'$CHAR_ESC']\+\)\(|[[:blank:]]*'${STY##*.}':[[:digit:]]\+[[:blank:]]*|\)#\1'${current_screen_color}'\2'$RESET_COLOR'#;' \
   | sed 's#$#'$RESET_COLOR'#g;'
+  #| sed 's#^\([^'$CHAR_ESC']\+\)\(|[[:blank:]]*'${STY##*.}':[[:digit:]]\+[[:blank:]]*|\)#\1'${current_screen_color}'\2'$RESET_COLOR'#;' \
 
 ## Last 3 SED's explanation
  # current session
