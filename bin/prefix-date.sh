@@ -2,6 +2,7 @@
 
 HERE="$(pwd)"
 export DEBUG=0
+export VERBOSE=1
 
 # {{{ function usage
 # #
@@ -12,9 +13,11 @@ usage() {
     echo "USAGE: $0 [OPTIONS] FILE_OR_DIR"
     echo
     echo "Where OPTIONS could be:"
-    echo "    -h|--help)   print this usage and exit without error"
-    echo "    -d|--debug)  set debug (dry-run, don't execute the replacement)"
-    echo "    -f|--filter) filter result with given \"regex\" (@see find -name available regex)"
+    echo "    -h|--help)       print this usage and exit without error"
+    echo "    -d|--debug)      set debug (dry-run, don't execute the replacement)"
+    echo "    -v|--verbose)    display more informations on stdin (can be called multiple until to 3 times to increase verbosity)."
+    echo "    -V|--no-verbose) decrease verbosity (default is 1)."
+    echo "    -f|--filter)     filter result with given \"regex\" (@see find -name available regex)"
 }
 export -f usage
 # }}}
@@ -38,13 +41,17 @@ prefixDate() {
     local dir="$(dirname "$file")"
     local base="$(basename "$file")"
     if [[ "${base:0:8}" =~ ^[0-9]{8}$ ]] ; then
-        quit "'$file': already date prefixed"
+        if [[ $VERBOSE -ge 2 ]] ; then
+            echo "'$file': already date prefixed"
+        fi
+        return 0
     fi
     if [[ $DEBUG -eq 1 ]] ; then
-        echo mv "$file"
-        echo "$dir/$prefix-$base"
+        echo "DEBUG: mv '$file' '$dir/$prefix-$base'"
     else
-        mv -v "$file" "$dir/$prefix-$base"
+        if [[ $VERBOSE -gt 1 ]] ; then
+            mv -v "$file" "$dir/$prefix-$base"
+        fi
     fi
     
 }
@@ -53,9 +60,11 @@ export -f prefixDate
 
 while [ ! -z "$1" ] ; do
     case $1 in
-        -h|--help) usage ; exit 0 ;;
-        -d|--debug) export DEBUG=1 ;;
-        -f|--filter) export FILTER="$2" ; shift ;;
+        -h|--help)    usage ; exit 0 ;;
+        -d|--debug)   export DEBUG=1 ;;
+        -v|--verbose) let VERBOSE++ ;;
+        -V|--no-verbose) let VERBOSE-- ;;
+        -f|--filter)  export FILTER="$2" ; shift ;;
         -*) quit "'$1': unknown option" ;;
         *)
         [ -z "$DIR" ] \
@@ -65,6 +74,7 @@ while [ ! -z "$1" ] ; do
     esac
     shift
 done
+export VERBOSE="$VERBOSE"
 
 [ -z "$DIR" ] && DIR="./"
 
