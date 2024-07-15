@@ -94,7 +94,7 @@ if [ ! -e "$DIR" ] ; then
 fi
 
 if [ -z "$FILTER" ] ; then
-    find $DIR -maxdepth 1 -type f -exec bash -c 'prefixDate "$0"' {} \;
+    find "$DIR" -maxdepth 1 -type f -exec bash -c 'prefixDate "$0"' {} \;
 else
-    find $DIR -maxdepth 1 -type f -name "$FILTER" -exec bash -c 'prefixDate "$0"' {} \;
+    find "$DIR" -maxdepth 1 -type f -name "$FILTER" -exec bash -c 'prefixDate "$0"' {} \;
 fi
