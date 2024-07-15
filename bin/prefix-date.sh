@@ -51,6 +51,8 @@ prefixDate() {
     else
         if [[ $VERBOSE -gt 1 ]] ; then
             mv -v "$file" "$dir/$prefix-$base"
+        else
+            mv "$file" "$dir/$prefix-$base"
         fi
     fi
     
