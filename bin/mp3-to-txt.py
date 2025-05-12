@@ -37,7 +37,8 @@ def transcribe_mp3(mp3_path):
 
     # Charger l'audio WAV
     audio = AudioSegment.from_wav(wav_path)
-    duration_seconds = len(audio) / 1000  # Durée en secondes
+    duration_milli_seconds = len(audio)
+    duration_seconds = duration_milli_seconds / 1000  # Durée en secondes
     num_chunks = math.ceil(duration_seconds / 60)
 
     recognizer = sr.Recognizer()
@@ -80,10 +81,11 @@ def transcribe_mp3(mp3_path):
         #     raise Exception(f"[Erreur] Reconnaissance impossible sur le morceau {i+1}/{num_chunks}.")
         # Exception: [Erreur] Reconnaissance impossible sur le morceau 12/12.
         for i in range(num_chunks):
-            print(f"[Info] Traitement du morceau {i+1}/{num_chunks}...")
 
             start_ms = i * 60_000
-            end_ms = min((i + 1) * 60_000, len(audio))
+            end_ms = min((i + 1) * 60_000, duration_milli_seconds)
+
+            print(f"[Info] Traitement du morceau {i+1}/{num_chunks} [{start_ms}:{end_ms}]...")
             chunk = audio[start_ms:end_ms]
 
             chunk_wav_path = f"{base_path}_chunk_{i}.wav"
