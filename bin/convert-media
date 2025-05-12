@@ -1,0 +1,65 @@
+#!/bin/bash
+# An ffmpeg script to convert media for default formats.
+# TODO: implements more formats
+# TODO: tests supported formats
+
+# {{{ function usage
+#
+usage(){
+    echo
+    echo "An ffmpeg script to convert media for default formats."
+    echo
+    echo "USAGE: $0 [OPTIONS] --to {TARGET_FORMAT} {MEDIA_FILE}"
+    echo
+    echo "WHERE OPTIONS could be:"
+    echo "    -h|--help                     Prints this message and exit without error."
+    echo "    -t|--to {TARGET_FORMAT}       Defines the {TARGET_FORMAT}."
+    echo
+    echo "And WHERE:"
+    echo "    * {MEDIA_FILE} have to exists,"
+    echo "    * and the {MEDIA_FILE} filename must finish with the SRC_FORMAT extension."
+    echo
+    echo "Notes:"
+    echo "    * At this time, the supported format for convertion are only the following one:"
+    echo "      - webm_to_mp4"
+    echo "      - mp4_to_mp3"
+    echo "    * More format will be supported later..."
+    echo
+}
+export -f usage
+# }}}
+quit(){
+    echo
+    echo -e "ERROR: $1"
+    usage
+}
+SRC_FORMAT=""
+TARGET_FORMAT=""
+MEDIA_FILE=""
+while [ ! -z "$1" ] ; do
+    case "$1" in
+        -h|--help) usage ; exit 0 ;;
+        -t|--to) TARGET_FORMAT="$2" ; shift ;;
+        *) MEDIA_FILE="$1" ;;
+    esac
+    shift
+done
+[ -z "$MEDIA_FILE" ] && quit "{MEDIA_FILE} is required!"
+[ ! -r "$MEDIA_FILE" ] && quit "'$MEDIA_FILE': {MEDIA_FILE} must exists and be readable!"
+[ -z "$TARGET_FORMAT" ] && quit "{TARGET_FORMAT} is required!"
+
+SRC_FORMAT="$(basename "$MEDIA_FILE" | sed 's/.*\.\([^\.]\)$')"
+[ -z "$SRC_FORMAT" ] && quit "{SRC_FORMAT} is required!"
+
+CMD="${SRC_FORMAT}_to_${TARGET_FORMAT}"
+
+echo "Working on '$MEDIA_FILE' with CMD: '$CMD'"
+
+webm_to_mp4(){
+    ffmpeg -fflags +genpts -i "$1" -r 24 "${1/.webm/.mp4}"
+}
+mp4_to_mp3(){
+    ffmpeg -i "$1" "${1mpwwebm/.mp4}"
+}
+
+$CMD "$MEDIA_FILE"
