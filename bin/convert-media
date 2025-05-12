@@ -1,6 +1,7 @@
 #!/bin/bash
 # An ffmpeg script to convert media for default formats.
 # TODO: implements more formats
+# TODO: check if target file already exists or not
 
 # {{{ function usage
 #
