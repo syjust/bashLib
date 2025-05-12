@@ -1,7 +1,6 @@
 #!/bin/bash
 # An ffmpeg script to convert media for default formats.
 # TODO: implements more formats
-# TODO: tests supported formats
 
 # {{{ function usage
 #
@@ -32,6 +31,7 @@ quit(){
     echo
     echo -e "ERROR: $1"
     usage
+    exit 1
 }
 SRC_FORMAT=""
 TARGET_FORMAT=""
@@ -48,18 +48,26 @@ done
 [ ! -r "$MEDIA_FILE" ] && quit "'$MEDIA_FILE': {MEDIA_FILE} must exists and be readable!"
 [ -z "$TARGET_FORMAT" ] && quit "{TARGET_FORMAT} is required!"
 
-SRC_FORMAT="$(basename "$MEDIA_FILE" | sed 's/.*\.\([^\.]\)$')"
+SRC_FORMAT="$(basename "$MEDIA_FILE" | sed 's/.*\.\([^\.]\{1,4\}\)$/\1/')"
 [ -z "$SRC_FORMAT" ] && quit "{SRC_FORMAT} is required!"
 
 CMD="${SRC_FORMAT}_to_${TARGET_FORMAT}"
 
 echo "Working on '$MEDIA_FILE' with CMD: '$CMD'"
 
+fn_exists(){
+    local fn_type="$(type -t "$1" 2>/dev/null || echo "noop")"
+    [[ "x$fn_type" == "xfunction" ]]
+}
 webm_to_mp4(){
     ffmpeg -fflags +genpts -i "$1" -r 24 "${1/.webm/.mp4}"
 }
 mp4_to_mp3(){
-    ffmpeg -i "$1" "${1mpwwebm/.mp4}"
+    ffmpeg -i "$1" "${1/.mp4/.mp3}"
 }
 
-$CMD "$MEDIA_FILE"
+if ( fn_exists "$CMD" ) ; then
+    $CMD "$MEDIA_FILE"
+else
+    quit "'$CMD' not found / conversion not already implemented!"
+fi
