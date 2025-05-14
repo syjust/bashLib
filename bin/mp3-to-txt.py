@@ -1,4 +1,8 @@
 # pip install SpeechRecognition pydub
+# TODO: add arguments and options for
+#       - force the output file name instead of creating it automatically
+#       - override an existing output file
+#       - choose the starting num_chunk (default is 0)
 import sys
 import os
 import math
@@ -22,7 +26,9 @@ def transcribe_mp3(mp3_path):
     # Définir chemins
     base_path = os.path.splitext(mp3_path)[0]
     wav_path = base_path + ".wav"
+    # TODO: override existing file
     output_txt_path = get_unique_output_path(base_path)
+    #output_txt_path = base_path + ".txt"
 
     # Convertir MP3 -> WAV si nécessaire
     if os.path.isfile(wav_path):
@@ -45,7 +51,9 @@ def transcribe_mp3(mp3_path):
 
     print(f"[Info] Début de la transcription ({num_chunks} morceau(x) de 60 secondes, durée totale : {int(duration_seconds)} secondes).")
 
+    # TODO: override existing file (or not)
     with open(output_txt_path, "w", encoding="utf-8") as f:
+    #with open(output_txt_path, "w+", encoding="utf-8") as f:
         # TODO: fix the last chunck processing => it should start from 0 - not from 1
         # [Info] Fichier WAV trouvé, conversion sautée.
         # [Info] Début de la transcription (12 morceau(x) de 60 secondes, durée totale : 668 secondes).
@@ -80,7 +88,9 @@ def transcribe_mp3(mp3_path):
         #   File "./mp3-to-txt.py", line 65, in transcribe_mp3
         #     raise Exception(f"[Erreur] Reconnaissance impossible sur le morceau {i+1}/{num_chunks}.")
         # Exception: [Erreur] Reconnaissance impossible sur le morceau 12/12.
+        # TODO: allow to change the starting num_chunk
         for i in range(num_chunks):
+        #for i in range(12, num_chunks):
 
             start_ms = i * 60_000
             end_ms = min((i + 1) * 60_000, duration_milli_seconds)
