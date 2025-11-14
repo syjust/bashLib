@@ -6,7 +6,7 @@
 # {{{ function riname: Rename a file without space or special chars (and with date prefix if flag is set as third arg)
 #
 # @param string {source} as file or folder to rename
-# @param int {debug} as debug flag - default 0 (1 => true / dry-run)
+# @param int {debug} as debug flag - default 0 (1 => true / dry-run) (2 => very-verbose)
 # @param int {with_date_prefix} - default 0 (1 => add a date prefix formatted as 'YYYYMMDD-')
 #
 riname() {
@@ -35,7 +35,13 @@ riname() {
 
     source_dir="`dirname "$source"`"
     source_ext="${source##*.}"
-    source_name="`basename "${source/.$source_ext}"`"
+    if [[ "$source" == "${source_dir}${source_ext}" ]] ; then
+        # no extension found (probably a directory => './DIR ITEM'
+        source_name="`basename "${source}"`"
+        source_ext=""
+    else
+        source_name="`basename "${source/.$source_ext}"`"
+    fi
     target_name="`
         echo "${source_name}" \
             | sed "
@@ -57,6 +63,13 @@ riname() {
                 s/[ÏÏÎ]/I/g;
             " \
     `"
+    if [[ $debug -eq 2 ]] ; then
+        echo "[DEBUG] source='$source'" >&2
+        echo "[DEBUG] source_dir='$source_dir'" >&2
+        echo "[DEBUG] source_ext='$source_ext'" >&2
+        echo "[DEBUG] source_name='$source_name'" >&2
+        echo "[DEBUG] target_name='$target_name'" >&2
+    fi
 
     if [[ $with_date_prefix -eq 1 ]] ; then
         source_date_prefix="${source_name%%-*}"
@@ -69,18 +82,30 @@ riname() {
     fi
 
     if [[ "$target_name" == "$source_name" ]] ; then
-        echo "riname: nothing to do with '$source'" >&2
+        if [[ $debug -ge 1 ]] ; then
+            echo "riname: nothing to do with '$source' - [DEBUG] target:'$target_name' === source:'$source_name'" >&2
+        else
+            echo "riname: nothing to do with '$source'" >&2
+        fi
         return 0
     fi
-    target="$source_dir/$target_name.$source_ext"
+    if [[ -z "$source_ext" ]] ; then
+        target="$source_dir/$target_name"
+    else
+        target="$source_dir/$target_name.$source_ext"
+    fi
     if [[ -e "$source_dir/$target" ]] ; then
         while [[ -e "$source_dir/$target" ]] ; do
             let rename_count++;
-            target="$source_dir/$target_name.$rename_count.$source_ext"
+            if [[ -z "$source_ext" ]] ; then
+                target="$source_dir/$target_name.$rename_count"
+            else
+                target="$source_dir/$target_name.$rename_count.$source_ext"
+            fi
         done
     fi
-    if [[ $debug -eq 1 ]] ; then
-        echo "riname (debug): mv -v '$source' -> '$target'" >&2
+    if [[ $debug -ge 1 ]] ; then
+        echo "[DEBUG] riname (debug): mv -v '$source' -> '$target'" >&2
     else
         mv -v "$source" "$target" >&2
     fi
@@ -111,12 +136,36 @@ d_riname_with_date_prefix() {
 }
 export -f d_riname_with_date_prefix
 # }}}
+#
+# {{{ function dd_riname
+#
+# @param string {source} as file or folder to rename
+#
+# @see riname()
+#
+dd_riname() {
+    riname "$1" 2 0
+}
+export -f dd_riname
+# }}}
+
+# {{{ function dd_riname_with_date_prefix
+#
+# @param string {source} as file or folder to rename
+#
+# @see riname()
+#
+dd_riname_with_date_prefix() {
+    riname "$1" 2 1
+}
+export -f dd_riname_with_date_prefix
+# }}}
 
 # {{{ function find_and_rename: find directories (firstly) & files (secondly) into given {folder} at given {proof} and apply riname() function on it
 #
 # @param string  {folder} as path where to find - default ./
 # @param integer {proof} as proof to find - default 0 (0 => max depth accessible in folder)
-# @param int     {debug} as debug flag - default 0 (1 => true / dry-run)
+# @param int     {debug} as debug flag - default 0 (1 => true / dry-run) (2 => very-verbose)
 # @param int     {with_date_prefix} - default 0 (1 => add a date prefix formatted as 'YYYYMMDD-')
 #
 # @see riname()
@@ -164,6 +213,20 @@ d_find_and_rename() {
 }
 export -f d_find_and_rename
 # }}}
+#
+# {{{ function dd_find_and_rename: call function find_and_rename with debug very-verbose flag (dry-run)
+#
+# @param string  {folder} as path where to find - default ./
+# @param integer {proof} as proof to find - default 0 (0 => infinity)
+#
+# @see find_and_rename()
+#
+#
+dd_find_and_rename() {
+    find_and_rename "${1:-./}" "${2:-0}" 2 0
+}
+export -f dd_find_and_rename
+# }}}
 
 # {{{ function find_and_rename_with_date: call function find_and_rename with with_date_prefix flag
 #
@@ -191,4 +254,18 @@ d_find_and_rename_with_date() {
     find_and_rename "${1:-./}" "${2:-0}" 1 1
 }
 export -f d_find_and_rename_with_date
+# }}}
+
+# {{{ function dd_find_and_rename_with_date: call function find_and_rename with with_date_prefix & debug very-verbose flags (dry-run)
+#
+# @param string  {folder} as path where to find - default ./
+# @param integer {proof} as proof to find - default 0 (0 => infinity)
+#
+# @see find_and_rename()
+#
+#
+dd_find_and_rename_with_date() {
+    find_and_rename "${1:-./}" "${2:-0}" 2 1
+}
+export -f dd_find_and_rename_with_date
 # }}}
