@@ -1,0 +1,94 @@
+#!/bin/bash
+
+if [[ -z "$1" ]]; then
+    echo "Usage: screen-find-pid <pid>"
+    echo "Find which screen session/window contains a process"
+    exit 1
+fi
+
+TARGET_PID="$1"
+
+if ! ps -p "$TARGET_PID" > /dev/null 2>&1; then
+    echo "Error: PID $TARGET_PID not found"
+    exit 1
+fi
+
+TARGET_TTY=$(ps -p "$TARGET_PID" -o tty= | tr -d ' ')
+if [[ -z "$TARGET_TTY" || "$TARGET_TTY" == "??" ]]; then
+    echo "Error: PID $TARGET_PID has no TTY (not running in a terminal)"
+    exit 1
+fi
+
+CURRENT_PID="$TARGET_PID"
+SCREEN_PID=""
+SCREEN_NAME=""
+
+while [[ -n "$CURRENT_PID" && "$CURRENT_PID" != "1" ]]; do
+    PARENT_PID=$(ps -p "$CURRENT_PID" -o ppid= | tr -d ' ')
+    if [[ -z "$PARENT_PID" ]]; then
+        break
+    fi
+
+    PARENT_CMD=$(ps -p "$PARENT_PID" -o command= 2>/dev/null)
+    if [[ "$PARENT_CMD" == *"/SCREEN "* || "$PARENT_CMD" == *"/screen "* ]]; then
+        SCREEN_PID="$PARENT_PID"
+        if [[ "$PARENT_CMD" =~ -S[[:space:]]+([^[:space:]]+) ]]; then
+            SCREEN_NAME="${BASH_REMATCH[1]}"
+        fi
+        break
+    fi
+
+    CURRENT_PID="$PARENT_PID"
+done
+
+if [[ -z "$SCREEN_PID" ]]; then
+    echo "Error: PID $TARGET_PID is not running inside a screen session"
+    exit 1
+fi
+
+if [[ -z "$SCREEN_NAME" ]]; then
+    SCREEN_NAME=$(screen -ls | grep "$SCREEN_PID" | sed -E 's/.*\.([^[:space:]]+).*/\1/' | head -1)
+fi
+
+WINDOW_NUM=""
+WINDOW_NAME=""
+
+WINDOW_INDEX=0
+while IFS= read -r line; do
+    CHILD_TTY=$(echo "$line" | awk '{print $1}')
+    CHILD_TTY_CLEAN=$(echo "$CHILD_TTY" | sed 's/^ttys/s/')
+
+    if [[ "$CHILD_TTY_CLEAN" == "$TARGET_TTY" || "$CHILD_TTY" == "$TARGET_TTY" ]]; then
+        WINDOW_NUM="$WINDOW_INDEX"
+        break
+    fi
+    ((WINDOW_INDEX++))
+done < <(ps -eo tty,pid,ppid --sort=pid 2>/dev/null | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}' || \
+         ps -eo tty,pid,ppid | sort -k2 -n | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}')
+
+if [[ -z "$WINDOW_NUM" ]]; then
+    WINDOW_INDEX=0
+    while IFS= read -r line; do
+        CHILD_TTY=$(echo "$line" | awk '{print $1}')
+        CHILD_TTY_CLEAN=$(echo "$CHILD_TTY" | sed 's/^ttys/s/')
+
+        if [[ "$CHILD_TTY_CLEAN" == "$TARGET_TTY" || "$CHILD_TTY" == "$TARGET_TTY" ]]; then
+            WINDOW_NUM="$WINDOW_INDEX"
+            break
+        fi
+        ((WINDOW_INDEX++))
+    done < <(ps -o tty,pid -p $(pgrep -P "$SCREEN_PID" | tr '\n' ',')0 2>/dev/null | tail -n +2 | sort -k2 -n)
+fi
+
+if [[ -n "$SCREEN_NAME" && -n "$WINDOW_NUM" ]]; then
+    WINDOWS_OUTPUT=$(screen -S "$SCREEN_NAME" -Q windows 2>/dev/null)
+    if [[ -n "$WINDOWS_OUTPUT" ]]; then
+        WINDOW_NAME=$(echo "$WINDOWS_OUTPUT" | tr '  ' '\n' | grep "^${WINDOW_NUM} " | sed "s/^${WINDOW_NUM} //")
+    fi
+fi
+
+echo "Screen session: $SCREEN_NAME"
+echo "Window number:  $WINDOW_NUM"
+[[ -n "$WINDOW_NAME" ]] && echo "Window name:    $WINDOW_NAME"
+echo ""
+echo "To attach: screen -r $SCREEN_NAME -p $WINDOW_NUM"
