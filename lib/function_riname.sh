@@ -169,35 +169,35 @@ export -f riname
 
 # {{{ function find_and_rename: find directories (firstly) & files (secondly) into given folder at given proof and apply riname() function on it
 #
-# USAGE: find_and_rename [OPTIONS] [FOLDER] [PROOF]
+# USAGE: find_and_rename [OPTIONS] [FOLDER]
 #
 # Options:
 #   -d|--debug          Enable debug mode (dry-run). Repeat for verbosity: -dd for very verbose
 #   -D|--with-date      Add date prefix formatted as 'YYYYMMDD-' from file timestamp
+#   -p|--proof {PROOF}  Max search depth (default: 1, 0 = unlimited)
 #   -h|--help           Display usage information
 #
 # Arguments:
 #   FOLDER              Path to search (default: ./)
-#   PROOF               Max search depth (default: 0 = unlimited)
 #
 # @see riname()
 #
 find_and_rename_usage() {
-    echo "USAGE: find_and_rename [OPTIONS] [FOLDER] [PROOF]"
+    echo "USAGE: find_and_rename [OPTIONS] [FOLDER]"
     echo
     echo "Options:"
     echo "  -d|--debug          Enable debug mode (dry-run). Repeat for verbosity: -dd for very verbose"
     echo "  -D|--with-date      Add date prefix formatted as 'YYYYMMDD-' from file timestamp"
+    echo "  -p|--proof {PROOF}  Max search depth (default: 1, 0 = unlimited)"
     echo "  -h|--help           Display usage information"
     echo
     echo "Arguments:"
     echo "  FOLDER              Path to search (default: ./)"
-    echo "  PROOF               Max search depth (default: 0 = unlimited)"
 }
 
 function find_and_rename() {
     local dir=""
-    local proof=""
+    local proof=1
     local debug=0
     local with_date_prefix=0
     local positional_args=()
@@ -224,6 +224,10 @@ function find_and_rename() {
                 with_date_prefix=1
                 shift
                 ;;
+            -p|--proof)
+                proof="$2"
+                shift 2
+                ;;
             -*)
                 echo "find_and_rename: unknown option '$1'" >&2
                 find_and_rename_usage >&2
@@ -237,7 +241,6 @@ function find_and_rename() {
     done
 
     dir="${positional_args[0]:-./}"
-    proof="${positional_args[1]:-0}"
     local max=""
 
     export DEBUG="$debug"
