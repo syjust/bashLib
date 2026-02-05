@@ -1,9 +1,4 @@
 #!/bin/bash
-#
-# TODO: abstract run_tests, run_test, end of file, etc
-# TODO: add assert_file_exists, assert_file_not_exists with message instead of just a test
-# TODO: update trap use cases with following documentation https://opensource.com/article/20/6/bash-trap
-#
 set -Eeuio pipefail
 source lib/helper.inc.sh
 
@@ -37,7 +32,7 @@ trap 'on_exit'   EXIT
 # 29) SIGINFO	30) SIGUSR1	31) SIGUSR2	
 # }}}
 
-# {{{ function run_test + useful test functions (TODO: abstract this functions)
+# {{{ function run_test + useful test functions
 is_fn() {
     local fn_type="$(LC_ALL=C type -t $1)"
     [ ! -z "$fn_type" -a  "$fn_type" = function ]
@@ -89,6 +84,10 @@ set_up() {
     mkdir -p $TMP_DIR
 }
 
+tear_down() {
+    [ -d $TMP_DIR ] && rm -rf $TMP_DIR
+}
+
 function test_find_and_rename_with_date_idempotency() {
     local date="`date '+%Y%m%d'`"
     touch "$TMP_DIR/a b c d.txt"
@@ -119,6 +118,60 @@ function test_find_and_rename_increment_count_if_exists() {
     touch "$TMP_DIR/a b c d.txt"
     find_and_rename $TMP_DIR
     assert_file_exists "$TMP_DIR/a_b_c_d.2.txt"
+}
+
+function test_find_and_rename_default_proof_is_one() {
+    mkdir -p "$TMP_DIR/level1/level2"
+    touch "$TMP_DIR/root file.txt"
+    touch "$TMP_DIR/level1/first file.txt"
+    touch "$TMP_DIR/level1/level2/second file.txt"
+    find_and_rename "$TMP_DIR"
+    assert_file_exists "$TMP_DIR/root_file.txt"
+    assert_file_not_exists "$TMP_DIR/level1/first_file.txt"
+    assert_file_exists "$TMP_DIR/level1/first file.txt"
+    assert_file_not_exists "$TMP_DIR/level1/level2/second_file.txt"
+    assert_file_exists "$TMP_DIR/level1/level2/second file.txt"
+}
+
+function test_find_and_rename_proof_zero_is_unlimited() {
+    mkdir -p "$TMP_DIR/level1/level2/level3"
+    touch "$TMP_DIR/root file.txt"
+    touch "$TMP_DIR/level1/first file.txt"
+    touch "$TMP_DIR/level1/level2/second file.txt"
+    touch "$TMP_DIR/level1/level2/level3/third file.txt"
+    find_and_rename --proof 0 "$TMP_DIR"
+    assert_file_exists "$TMP_DIR/root_file.txt"
+    assert_file_exists "$TMP_DIR/level1/first_file.txt"
+    assert_file_exists "$TMP_DIR/level1/level2/second_file.txt"
+    assert_file_exists "$TMP_DIR/level1/level2/level3/third_file.txt"
+}
+
+function test_find_and_rename_proof_two() {
+    mkdir -p "$TMP_DIR/level1/level2/level3"
+    touch "$TMP_DIR/root file.txt"
+    touch "$TMP_DIR/level1/first file.txt"
+    touch "$TMP_DIR/level1/level2/second file.txt"
+    touch "$TMP_DIR/level1/level2/level3/third file.txt"
+    find_and_rename -p 2 "$TMP_DIR"
+    assert_file_exists "$TMP_DIR/root_file.txt"
+    assert_file_exists "$TMP_DIR/level1/first_file.txt"
+    assert_file_not_exists "$TMP_DIR/level1/level2/second_file.txt"
+    assert_file_exists "$TMP_DIR/level1/level2/second file.txt"
+    assert_file_not_exists "$TMP_DIR/level1/level2/level3/third_file.txt"
+    assert_file_exists "$TMP_DIR/level1/level2/level3/third file.txt"
+}
+
+function test_find_and_rename_combined_flags() {
+    local date="`date '+%Y%m%d'`"
+    mkdir -p "$TMP_DIR/subdir/another"
+    touch "$TMP_DIR/test file.txt"
+    touch "$TMP_DIR/subdir/first file.txt"
+    touch "$TMP_DIR/subdir/another/second file.txt"
+    find_and_rename --with-date -p 2 "$TMP_DIR"
+    assert_file_exists "$TMP_DIR/$date-test_file.txt"
+    assert_file_exists "$TMP_DIR/$date-subdir/$date-first_file.txt"
+    assert_file_not_exists "$TMP_DIR/$date-subdir/another/$date-second_file.txt"
+    assert_file_exists "$TMP_DIR/$date-subdir/another/second file.txt"
 }
 
 # run tests previously added
