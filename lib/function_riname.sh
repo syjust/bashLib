@@ -3,16 +3,34 @@
 # This script is included in my .bashrc to find and rename easily and recursivly
 # files and directories containing ASCII extended or ['-`()\[\]] chars
 
-# {{{ function riname: Rename a file without space or special chars (and with date prefix if flag is set as third arg)
+# {{{ function riname: Rename a file without space or special chars (and with date prefix if flag is set)
 #
-# @param string {source} as file or folder to rename
-# @param int {debug} as debug flag - default 0 (1 => true / dry-run) (2 => very-verbose)
-# @param int {with_date_prefix} - default 0 (1 => add a date prefix formatted as 'YYYYMMDD-')
+# USAGE: riname [OPTIONS] SOURCE
 #
+# Options:
+#   -d|--debug          Enable debug mode (dry-run). Repeat for verbosity: -dd for very verbose
+#   -D|--with-date      Add date prefix formatted as 'YYYYMMDD-' from file timestamp
+#   -h|--help           Display usage information
+#
+# Arguments:
+#   SOURCE              File or directory to rename
+#
+riname_usage() {
+    echo "USAGE: riname [OPTIONS] SOURCE"
+    echo
+    echo "Options:"
+    echo "  -d|--debug          Enable debug mode (dry-run). Repeat for verbosity: -dd for very verbose"
+    echo "  -D|--with-date      Add date prefix formatted as 'YYYYMMDD-' from file timestamp"
+    echo "  -h|--help           Display usage information"
+    echo
+    echo "Arguments:"
+    echo "  SOURCE              File or directory to rename"
+}
+
 riname() {
-    local source="$1" # file or folder with .ext & full path folder/ (source_dir)
-    local debug="${2:-0}"
-    local with_date_prefix="${3:-0}"
+    local source=""
+    local debug=0
+    local with_date_prefix=0
     local rename_count=0        # if a target already exists, adds an int before extension
     local source_dir=""         # full path folder/ from source and also used as target directory (dirname)
     local source_name=""        # just filename or dirname (without extension) extracted from the source (basename)
@@ -22,6 +40,42 @@ riname() {
     local date_to_add=""        # calculated date to add from file timestamp
     local source_date_prefix="" # already existing date suffix in source (formatted as 'YYYYMMDD-')
 
+    while [[ $# -gt 0 ]] ; do
+        case "$1" in
+            -h|--help)
+                riname_usage
+                return 0
+                ;;
+            -d*)
+                local flag="${1#-}"
+                while [[ "$flag" == d* ]]; do
+                    let debug++
+                    flag="${flag#d}"
+                done
+                shift
+                ;;
+            --debug)
+                let debug++
+                shift
+                ;;
+            -D|--with-date)
+                with_date_prefix=1
+                shift
+                ;;
+            -*)
+                echo "riname: unknown option '$1'" >&2
+                riname_usage >&2
+                return 1
+                ;;
+            *)
+                source="$1"
+                shift
+                ;;
+        esac
+    done
+
+    [[ $debug -eq 0 ]] && debug="${DEBUG:-0}"
+    [[ $with_date_prefix -eq 0 ]] && with_date_prefix="${WITH_DATE:-0}"
 
     if [[ -z "$source" ]]  ; then
         echo "riname: source not found ($source)" >&2
@@ -113,69 +167,82 @@ riname() {
 export -f riname
 # }}}
 
-# {{{ function d_riname
+# {{{ function find_and_rename: find directories (firstly) & files (secondly) into given folder at given proof and apply riname() function on it
 #
-# @param string {source} as file or folder to rename
+# USAGE: find_and_rename [OPTIONS] [FOLDER] [PROOF]
+#
+# Options:
+#   -d|--debug          Enable debug mode (dry-run). Repeat for verbosity: -dd for very verbose
+#   -D|--with-date      Add date prefix formatted as 'YYYYMMDD-' from file timestamp
+#   -h|--help           Display usage information
+#
+# Arguments:
+#   FOLDER              Path to search (default: ./)
+#   PROOF               Max search depth (default: 0 = unlimited)
 #
 # @see riname()
 #
-d_riname() {
-    riname "$1" 1 0
+find_and_rename_usage() {
+    echo "USAGE: find_and_rename [OPTIONS] [FOLDER] [PROOF]"
+    echo
+    echo "Options:"
+    echo "  -d|--debug          Enable debug mode (dry-run). Repeat for verbosity: -dd for very verbose"
+    echo "  -D|--with-date      Add date prefix formatted as 'YYYYMMDD-' from file timestamp"
+    echo "  -h|--help           Display usage information"
+    echo
+    echo "Arguments:"
+    echo "  FOLDER              Path to search (default: ./)"
+    echo "  PROOF               Max search depth (default: 0 = unlimited)"
 }
-export -f d_riname
-# }}}
 
-# {{{ function d_riname_with_date_prefix
-#
-# @param string {source} as file or folder to rename
-#
-# @see riname()
-#
-d_riname_with_date_prefix() {
-    riname "$1" 1 1
-}
-export -f d_riname_with_date_prefix
-# }}}
-#
-# {{{ function dd_riname
-#
-# @param string {source} as file or folder to rename
-#
-# @see riname()
-#
-dd_riname() {
-    riname "$1" 2 0
-}
-export -f dd_riname
-# }}}
-
-# {{{ function dd_riname_with_date_prefix
-#
-# @param string {source} as file or folder to rename
-#
-# @see riname()
-#
-dd_riname_with_date_prefix() {
-    riname "$1" 2 1
-}
-export -f dd_riname_with_date_prefix
-# }}}
-
-# {{{ function find_and_rename: find directories (firstly) & files (secondly) into given {folder} at given {proof} and apply riname() function on it
-#
-# @param string  {folder} as path where to find - default ./
-# @param integer {proof} as proof to find - default 0 (0 => max depth accessible in folder)
-# @param int     {debug} as debug flag - default 0 (1 => true / dry-run) (2 => very-verbose)
-# @param int     {with_date_prefix} - default 0 (1 => add a date prefix formatted as 'YYYYMMDD-')
-#
-# @see riname()
-#
 function find_and_rename() {
-    local dir="${1:-./}"
-    local proof="${2:-0}"
-    local debug="${3:-0}"
-    local with_date_prefix="${4:-0}"
+    local dir=""
+    local proof=""
+    local debug=0
+    local with_date_prefix=0
+    local positional_args=()
+
+    while [[ $# -gt 0 ]] ; do
+        case "$1" in
+            -h|--help)
+                find_and_rename_usage
+                return 0
+                ;;
+            -d*)
+                local flag="${1#-}"
+                while [[ "$flag" == d* ]]; do
+                    let debug++
+                    flag="${flag#d}"
+                done
+                shift
+                ;;
+            --debug)
+                let debug++
+                shift
+                ;;
+            -D|--with-date)
+                with_date_prefix=1
+                shift
+                ;;
+            -*)
+                echo "find_and_rename: unknown option '$1'" >&2
+                find_and_rename_usage >&2
+                return 1
+                ;;
+            *)
+                positional_args+=("$1")
+                shift
+                ;;
+        esac
+    done
+
+    dir="${positional_args[0]:-./}"
+    proof="${positional_args[1]:-0}"
     local max=""
+
+    export DEBUG="$debug"
+    export WITH_DATE="$with_date_prefix"
+
     if [[ -d "$dir" ]] ; then
         cd "$dir" >&2
         [[ $? -ne 0 ]] && echo "find_and_rename: can't go into folder '$dir'" >&2 && return 1
@@ -189,8 +256,8 @@ function find_and_rename() {
             done
         fi
         for max in `seq 1 $proof` ; do
-            find ./ -mindepth $max -maxdepth $max ! -regex ".*\.git.*" -type d -exec bash -c 'riname "$0" "$1" "$2"' {} $debug $with_date_prefix \;
-            find ./ -mindepth $max -maxdepth $max ! -regex ".*\.git.*" -type f -exec bash -c 'riname "$0" "$1" "$2"' {} $debug $with_date_prefix \;
+            find ./ -mindepth $max -maxdepth $max ! -regex ".*\.git.*" -type d -exec bash -c 'riname "$0"' {} \;
+            find ./ -mindepth $max -maxdepth $max ! -regex ".*\.git.*" -type f -exec bash -c 'riname "$0"' {} \;
         done
         cd - >&2
     else
@@ -198,74 +265,4 @@ function find_and_rename() {
     fi
 }
 export -f find_and_rename
-# }}}
-
-# {{{ function d_find_and_rename: call function find_and_rename with debug flag (dry-run)
-#
-# @param string  {folder} as path where to find - default ./
-# @param integer {proof} as proof to find - default 0 (0 => infinity)
-#
-# @see find_and_rename()
-#
-#
-d_find_and_rename() {
-    find_and_rename "${1:-./}" "${2:-0}" 1 0
-}
-export -f d_find_and_rename
-# }}}
-#
-# {{{ function dd_find_and_rename: call function find_and_rename with debug very-verbose flag (dry-run)
-#
-# @param string  {folder} as path where to find - default ./
-# @param integer {proof} as proof to find - default 0 (0 => infinity)
-#
-# @see find_and_rename()
-#
-#
-dd_find_and_rename() {
-    find_and_rename "${1:-./}" "${2:-0}" 2 0
-}
-export -f dd_find_and_rename
-# }}}
-
-# {{{ function find_and_rename_with_date: call function find_and_rename with with_date_prefix flag
-#
-# @param string  {folder} as path where to find - default ./
-# @param integer {proof} as proof to find - default 0 (0 => infinity)
-#
-# @see find_and_rename()
-#
-#
-find_and_rename_with_date() {
-    find_and_rename "${1:-./}" "${2:-0}" 0 1
-}
-export -f find_and_rename_with_date
-# }}}
-
-# {{{ function d_find_and_rename_with_date: call function find_and_rename with with_date_prefix & debug flags (dry-run)
-#
-# @param string  {folder} as path where to find - default ./
-# @param integer {proof} as proof to find - default 0 (0 => infinity)
-#
-# @see find_and_rename()
-#
-#
-d_find_and_rename_with_date() {
-    find_and_rename "${1:-./}" "${2:-0}" 1 1
-}
-export -f d_find_and_rename_with_date
-# }}}
-
-# {{{ function dd_find_and_rename_with_date: call function find_and_rename with with_date_prefix & debug very-verbose flags (dry-run)
-#
-# @param string  {folder} as path where to find - default ./
-# @param integer {proof} as proof to find - default 0 (0 => infinity)
-#
-# @see find_and_rename()
-#
-#
-dd_find_and_rename_with_date() {
-    find_and_rename "${1:-./}" "${2:-0}" 2 1
-}
-export -f dd_find_and_rename_with_date
 # }}}

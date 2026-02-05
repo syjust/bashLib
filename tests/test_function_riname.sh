@@ -92,9 +92,9 @@ set_up() {
 function test_find_and_rename_with_date_idempotency() {
     local date="`date '+%Y%m%d'`"
     touch "$TMP_DIR/a b c d.txt"
-    find_and_rename_with_date $TMP_DIR
+    find_and_rename --with-date "$TMP_DIR"
     assert_file_exists "$TMP_DIR/$date-a_b_c_d.txt"
-    find_and_rename_with_date $TMP_DIR
+    find_and_rename --with-date "$TMP_DIR"
     assert_file_exists "$TMP_DIR/$date-a_b_c_d.txt"
 }
 
