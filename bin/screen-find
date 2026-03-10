@@ -1,0 +1,172 @@
+#!/bin/bash
+
+[ -z "$BASH_LIB" ] && BASH_LIB="$(dirname "$(dirname "$(readlink -f "$0")")")"
+source "$BASH_LIB/lib/helper.inc.sh"
+
+usage() {
+    cat <<USAGE
+$(bredn "Usage:") $(bwhiten "screen-find") [OPTIONS] [PID...]
+
+Find which screen session/window contains a running process.
+
+$(bredn "Modes:")
+  PIDs as arguments:    screen-find 1234 5678
+  PIDs from stdin:      pgrep claude | screen-find
+  Keyword via pgrep:    screen-find -p claude
+
+## OPTIONS
+  -h, --help            Display help and exit
+  -p, --pgrep PATTERN   Search for PIDs matching pattern via pgrep
+## END OPTIONS
+USAGE
+}
+
+screen_find_pid() {
+    local TARGET_PID="$1"
+
+    if ! ps -p "$TARGET_PID" > /dev/null 2>&1; then
+        warn "PID $TARGET_PID not found"
+        return 1
+    fi
+
+    local TARGET_TTY
+    TARGET_TTY=$(ps -p "$TARGET_PID" -o tty= | tr -d ' ')
+    if [[ -z "$TARGET_TTY" || "$TARGET_TTY" == "??" ]]; then
+        warn "PID $TARGET_PID has no TTY (not running in a terminal)"
+        return 1
+    fi
+
+    local CURRENT_PID="$TARGET_PID"
+    local SCREEN_PID=""
+    local SCREEN_NAME=""
+
+    while [[ -n "$CURRENT_PID" && "$CURRENT_PID" != "1" ]]; do
+        local PARENT_PID
+        PARENT_PID=$(ps -p "$CURRENT_PID" -o ppid= | tr -d ' ')
+        if [[ -z "$PARENT_PID" ]]; then
+            break
+        fi
+
+        local PARENT_CMD
+        PARENT_CMD=$(ps -p "$PARENT_PID" -o command= 2>/dev/null)
+        if [[ "$PARENT_CMD" == *"/SCREEN "* || "$PARENT_CMD" == *"/screen "* ]]; then
+            SCREEN_PID="$PARENT_PID"
+            if [[ "$PARENT_CMD" =~ -S[[:space:]]+([^[:space:]]+) ]]; then
+                SCREEN_NAME="${BASH_REMATCH[1]}"
+            fi
+            break
+        fi
+
+        CURRENT_PID="$PARENT_PID"
+    done
+
+    if [[ -z "$SCREEN_PID" ]]; then
+        warn "PID $TARGET_PID is not running inside a screen session"
+        return 1
+    fi
+
+    if [[ -z "$SCREEN_NAME" ]]; then
+        SCREEN_NAME=$(screen -ls | grep "$SCREEN_PID" | sed -E 's/.*\.([^[:space:]]+).*/\1/' | head -1)
+    fi
+
+    local WINDOW_NUM=""
+    local WINDOW_NAME=""
+    local WINDOW_INDEX=0
+
+    while IFS= read -r line; do
+        local CHILD_TTY
+        CHILD_TTY=$(echo "$line" | awk '{print $1}')
+        local CHILD_TTY_CLEAN
+        CHILD_TTY_CLEAN=$(echo "$CHILD_TTY" | sed 's/^ttys/s/')
+
+        if [[ "$CHILD_TTY_CLEAN" == "$TARGET_TTY" || "$CHILD_TTY" == "$TARGET_TTY" ]]; then
+            WINDOW_NUM="$WINDOW_INDEX"
+            break
+        fi
+        ((WINDOW_INDEX++))
+    done < <(ps -eo tty,pid,ppid --sort=pid 2>/dev/null | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}' || \
+             ps -eo tty,pid,ppid | sort -k2 -n | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}')
+
+    if [[ -z "$WINDOW_NUM" ]]; then
+        WINDOW_INDEX=0
+        while IFS= read -r line; do
+            local CHILD_TTY
+            CHILD_TTY=$(echo "$line" | awk '{print $1}')
+            local CHILD_TTY_CLEAN
+            CHILD_TTY_CLEAN=$(echo "$CHILD_TTY" | sed 's/^ttys/s/')
+
+            if [[ "$CHILD_TTY_CLEAN" == "$TARGET_TTY" || "$CHILD_TTY" == "$TARGET_TTY" ]]; then
+                WINDOW_NUM="$WINDOW_INDEX"
+                break
+            fi
+            ((WINDOW_INDEX++))
+        done < <(ps -o tty,pid -p $(pgrep -P "$SCREEN_PID" | tr '\n' ',')0 2>/dev/null | tail -n +2 | sort -k2 -n)
+    fi
+
+    if [[ -n "$SCREEN_NAME" && -n "$WINDOW_NUM" ]]; then
+        local WINDOWS_OUTPUT
+        WINDOWS_OUTPUT=$(screen -S "$SCREEN_NAME" -Q windows 2>/dev/null)
+        if [[ -n "$WINDOWS_OUTPUT" ]]; then
+            WINDOW_NAME=$(echo "$WINDOWS_OUTPUT" | tr '  ' '\n' | grep "^${WINDOW_NUM} " | sed "s/^${WINDOW_NUM} //")
+        fi
+    fi
+
+    info "PID $TARGET_PID"
+    echo "  Screen session: $SCREEN_NAME"
+    echo "  Window number:  $WINDOW_NUM"
+    [[ -n "$WINDOW_NAME" ]] && echo "  Window name:    $WINDOW_NAME"
+    echo "  Attach: screen -r $SCREEN_NAME -p $WINDOW_NUM"
+    echo ""
+}
+
+PIDS=()
+PGREP_PATTERN=""
+
+while [[ -n "$1" ]]; do
+    case "$1" in
+        ## OPTIONS
+        -h|--help)
+            usage
+            exit 0
+        ;;
+        -p|--pgrep)
+            PGREP_PATTERN="$2"
+            shift
+        ;;
+        ## END OPTIONS
+        *)
+            PIDS+=("$1")
+        ;;
+    esac
+    shift
+done
+
+if [[ -n "$PGREP_PATTERN" ]]; then
+    while IFS= read -r pid; do
+        [[ -n "$pid" ]] && PIDS+=("$pid")
+    done < <(pgrep -f "$PGREP_PATTERN")
+
+    if [[ ${#PIDS[@]} -eq 0 ]]; then
+        quit "No process found matching '$PGREP_PATTERN'"
+    fi
+fi
+
+if [[ ${#PIDS[@]} -eq 0 ]] && [[ ! -t 0 ]]; then
+    while IFS= read -r pid; do
+        pid=$(echo "$pid" | tr -d '[:space:]')
+        [[ -n "$pid" ]] && PIDS+=("$pid")
+    done
+fi
+
+if [[ ${#PIDS[@]} -eq 0 ]]; then
+    usage
+    exit 1
+fi
+
+FOUND=0
+for pid in "${PIDS[@]}"; do
+    screen_find_pid "$pid" && ((FOUND++))
+done
+
+[[ $FOUND -eq 0 ]] && exit 1
+exit 0
