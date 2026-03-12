@@ -104,17 +104,13 @@ screen_find_pid() {
     fi
 
     if [[ -n "$SCREEN_NAME" && -n "$WINDOW_NUM" ]]; then
-        local WINDOWS_OUTPUT
-        WINDOWS_OUTPUT=$(screen -S "$SCREEN_NAME" -Q windows 2>/dev/null)
-        if [[ -n "$WINDOWS_OUTPUT" ]]; then
-            WINDOW_NAME=$(echo "$WINDOWS_OUTPUT" | tr '  ' '\n' | grep "^${WINDOW_NUM} " | sed "s/^${WINDOW_NUM} //")
-        fi
+        WINDOW_NAME=$(screen -S "$SCREEN_NAME" -p "$WINDOW_NUM" -Q title 2>/dev/null)
     fi
 
     info "PID $TARGET_PID"
     echo "  Screen session: $SCREEN_NAME"
     echo "  Window number:  $WINDOW_NUM"
-    [[ -n "$WINDOW_NAME" ]] && echo "  Window name:    $WINDOW_NAME"
+    echo "  Window name:    ${WINDOW_NAME:--}"
     echo "  Attach: screen -r $SCREEN_NAME -p $WINDOW_NUM"
     echo ""
 }
