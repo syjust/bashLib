@@ -21,6 +21,65 @@ $(bredn "Modes:")
 USAGE
 }
 
+RESULTS=()
+
+screen_color_letter_to_name() {
+    case "${1,,}" in
+        k) echo "black" ;;
+        r) echo "red" ;;
+        g) echo "green" ;;
+        y) echo "yellow" ;;
+        b) echo "blue" ;;
+        m) echo "magenta" ;;
+        c) echo "cyan" ;;
+        w) echo "white" ;;
+        *) echo "" ;;
+    esac
+}
+
+get_session_color_func() {
+    local session="$1"
+    local screen_pid="$2"
+    local caption=""
+
+    if [[ -n "$screen_pid" ]]; then
+        local screen_cmd
+        screen_cmd=$(ps -p "$screen_pid" -o command= 2>/dev/null)
+        if [[ "$screen_cmd" =~ -c[[:space:]]+([^[:space:]]+) ]]; then
+            local config_file="${BASH_REMATCH[1]}"
+            config_file=$(eval echo "$config_file" 2>/dev/null)
+            if [[ -f "$config_file" ]]; then
+                caption=$(grep -h '^caption ' "$config_file" 2>/dev/null | tail -1)
+            fi
+        fi
+    fi
+
+    if [[ -z "$caption" ]]; then
+        local rc_files=("$HOME/.screenrc.$session" "$HOME/.screenrc")
+        for rc in "${rc_files[@]}"; do
+            [[ -f "$rc" ]] || continue
+            caption=$(grep -rh '^caption ' "$rc" $(grep -o 'source [^ ]*' "$rc" 2>/dev/null | sed 's/^source //' | while read -r f; do eval echo "$f" 2>/dev/null; done) 2>/dev/null | tail -1)
+            [[ -n "$caption" ]] && break
+        done
+    fi
+
+    if [[ -n "$caption" ]] && [[ "$caption" =~ %\{=[[:space:]]*([a-zA-Z])([a-zA-Z]) ]]; then
+        local bg_letter="${BASH_REMATCH[1]}"
+        local fg_letter="${BASH_REMATCH[2]}"
+        local bg_name fg_name
+        bg_name=$(screen_color_letter_to_name "$bg_letter")
+        fg_name=$(screen_color_letter_to_name "$fg_letter")
+        if [[ -n "$bg_name" && -n "$fg_name" ]]; then
+            local func_name="b${bg_name}_${fg_name}"
+            if declare -f "$func_name" > /dev/null 2>&1; then
+                echo "$func_name"
+                return
+            fi
+        fi
+    fi
+    echo "bblue_white"
+}
+
 screen_find_pid() {
     local TARGET_PID="$1"
 
@@ -107,12 +166,70 @@ screen_find_pid() {
         WINDOW_NAME=$(screen -S "$SCREEN_NAME" -p "$WINDOW_NUM" -Q title 2>/dev/null)
     fi
 
-    info "PID $TARGET_PID"
-    echo "  Screen session: $SCREEN_NAME"
-    echo "  Window number:  $WINDOW_NUM"
-    echo "  Window name:    ${WINDOW_NAME:--}"
-    echo "  Attach: screen -r $SCREEN_NAME -p $WINDOW_NUM"
-    echo ""
+    RESULTS+=("${SCREEN_NAME}|${WINDOW_NUM}|${WINDOW_NAME:--}|${TARGET_PID}|${SCREEN_PID}")
+}
+
+declare SESSION_COLORS
+
+display_results() {
+    if [[ ${#RESULTS[@]} -eq 0 ]]; then
+        return
+    fi
+
+    local sessions=()
+    local seen_sessions=""
+    for entry in "${RESULTS[@]}"; do
+        local session="${entry%%|*}"
+        if [[ " $seen_sessions " != *" $session "* ]]; then
+            sessions+=("$session")
+            seen_sessions+=" $session"
+        fi
+    done
+
+    for session in "${sessions[@]}"; do
+        local color_func
+        if [[ -n "${SESSION_COLORS[$session]:-}" ]]; then
+            color_func="${SESSION_COLORS[$session]}"
+        else
+            local screen_pid=""
+            for entry in "${RESULTS[@]}"; do
+                if [[ "${entry%%|*}" == "$session" ]]; then
+                    screen_pid=$(echo "$entry" | cut -d'|' -f5)
+                    break
+                fi
+            done
+            color_func=$(get_session_color_func "$session" "$screen_pid")
+            SESSION_COLORS[$session]="$color_func"
+        fi
+
+        local separator
+        separator=$(printf '%0.s-' {1..80})
+        echo "$separator"
+        echo "Session: $(bold "$session")"
+        echo "$separator"
+
+        local sorted_entries=()
+        for entry in "${RESULTS[@]}"; do
+            if [[ "${entry%%|*}" == "$session" ]]; then
+                sorted_entries+=("$entry")
+            fi
+        done
+
+        IFS=$'\n' sorted_entries=($(for e in "${sorted_entries[@]}"; do echo "$e"; done | sort -t'|' -k2 -n))
+        unset IFS
+
+        for entry in "${sorted_entries[@]}"; do
+            local win_num win_name pid
+            win_num=$(echo "$entry" | cut -d'|' -f2)
+            win_name=$(echo "$entry" | cut -d'|' -f3)
+            pid=$(echo "$entry" | cut -d'|' -f4)
+
+            echo "  Window: $($color_func "$win_num $win_name")"
+            echo "  Attach: screen -r $session -p $win_num"
+            echo "  PID: $pid"
+            echo ""
+        done
+    done
 }
 
 PIDS=()
@@ -165,4 +282,6 @@ for pid in "${PIDS[@]}"; do
 done
 
 [[ $FOUND -eq 0 ]] && exit 1
+
+display_results
 exit 0
