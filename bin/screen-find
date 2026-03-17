@@ -80,6 +80,18 @@ get_session_color_func() {
     echo "bblue_white"
 }
 
+parse_screen_window_nums() {
+    local win_list="$1"
+    local -a nums=()
+    while IFS= read -r entry; do
+        entry="${entry#"${entry%%[![:space:]]*}"}"
+        if [[ "$entry" =~ ^([0-9]+) ]]; then
+            nums+=("${BASH_REMATCH[1]}")
+        fi
+    done < <(echo "$win_list" | sed 's/  /\n/g')
+    echo "${nums[@]}"
+}
+
 screen_find_pid() {
     local TARGET_PID="$1"
 
@@ -130,7 +142,8 @@ screen_find_pid() {
 
     local WINDOW_NUM=""
     local WINDOW_NAME=""
-    local WINDOW_INDEX=0
+    local CHILD_INDEX=-1
+    local idx=0
 
     while IFS= read -r line; do
         local CHILD_TTY
@@ -139,27 +152,25 @@ screen_find_pid() {
         CHILD_TTY_CLEAN=$(echo "$CHILD_TTY" | sed 's/^ttys/s/')
 
         if [[ "$CHILD_TTY_CLEAN" == "$TARGET_TTY" || "$CHILD_TTY" == "$TARGET_TTY" ]]; then
-            WINDOW_NUM="$WINDOW_INDEX"
-            break
+            CHILD_INDEX=$idx
         fi
-        ((WINDOW_INDEX++))
-    done < <(ps -eo tty,pid,ppid --sort=pid 2>/dev/null | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}' || \
-             ps -eo tty,pid,ppid | sort -k2 -n | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}')
+        ((idx++))
+    done < <(ps -eo tty,pid,ppid | sort -k2 -n | awk -v ppid="$SCREEN_PID" '$3 == ppid {print $1, $2}')
 
-    if [[ -z "$WINDOW_NUM" ]]; then
-        WINDOW_INDEX=0
-        while IFS= read -r line; do
-            local CHILD_TTY
-            CHILD_TTY=$(echo "$line" | awk '{print $1}')
-            local CHILD_TTY_CLEAN
-            CHILD_TTY_CLEAN=$(echo "$CHILD_TTY" | sed 's/^ttys/s/')
-
-            if [[ "$CHILD_TTY_CLEAN" == "$TARGET_TTY" || "$CHILD_TTY" == "$TARGET_TTY" ]]; then
-                WINDOW_NUM="$WINDOW_INDEX"
-                break
+    if [[ $CHILD_INDEX -ge 0 && -n "$SCREEN_NAME" ]]; then
+        local win_list
+        win_list=$(screen -S "$SCREEN_NAME" -Q windows 2>/dev/null)
+        if [[ -n "$win_list" ]]; then
+            local -a win_nums
+            read -ra win_nums <<< "$(parse_screen_window_nums "$win_list")"
+            if [[ $CHILD_INDEX -lt ${#win_nums[@]} ]]; then
+                WINDOW_NUM="${win_nums[$CHILD_INDEX]}"
             fi
-            ((WINDOW_INDEX++))
-        done < <(ps -o tty,pid -p $(pgrep -P "$SCREEN_PID" | tr '\n' ',')0 2>/dev/null | tail -n +2 | sort -k2 -n)
+        fi
+    fi
+
+    if [[ -z "$WINDOW_NUM" && $CHILD_INDEX -ge 0 ]]; then
+        WINDOW_NUM="$CHILD_INDEX"
     fi
 
     if [[ -n "$SCREEN_NAME" && -n "$WINDOW_NUM" ]]; then
